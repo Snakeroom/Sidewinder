@@ -3,6 +3,7 @@ from django.contrib.auth.models import PermissionsMixin, UserManager
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils import timezone
+from solo.models import SingletonModel
 
 
 class UserMixin(models.Model):
@@ -39,8 +40,20 @@ class User(AbstractBaseUser, PermissionsMixin, UserMixin):
     def __str__(self):
         return self.username
 
+class RedditApplication(SingletonModel):
+    name = models.CharField(max_length=72)
+
+    client_id = models.CharField(max_length=14)
+    client_secret = models.CharField(max_length=27)
+
+    class Meta:
+        verbose_name = 'Reddit Application'
+        verbose_name_plural = 'Reddit Applications'
+
 class RedditCredentials(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
+    app = models.ForeignKey(RedditApplication, on_delete=models.PROTECT, related_name='credentials',
+                            default=RedditApplication.singleton_instance_id)
 
     access_token = models.CharField(max_length=200)
     refresh_token = models.CharField(max_length=200)

@@ -2,8 +2,10 @@ from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.forms import UserChangeForm, AdminPasswordChangeForm
 from django.urls import path
+from solo.admin import SingletonModelAdmin
 
-from sidewinder.identity.models import User, RedditCredentials
+from sidewinder.identity.models import User, RedditCredentials, RedditApplication
+
 
 class IdentityUserChangeForm(UserChangeForm):
     class Meta:
@@ -40,6 +42,10 @@ class UserAdmin(admin.ModelAdmin):
     def lookup_allowed(self, lookup, value):
         # Don't allow lookups involving passwords.
         return not lookup.startswith('password') and super().lookup_allowed(lookup, value)
+
+@admin.register(RedditApplication)
+class RedditAppAdmin(SingletonModelAdmin):
+    list_display = ('name',)
 
 @admin.register(RedditCredentials)
 class RedditCredentialsAdmin(admin.ModelAdmin):

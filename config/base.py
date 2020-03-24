@@ -36,6 +36,7 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'solo.apps.SoloAppConfig',
 ]
 
 LOCAL_APPS = [
