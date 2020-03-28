@@ -52,8 +52,6 @@ class RedditApplication(SingletonModel):
 
 class RedditCredentials(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
-    app = models.ForeignKey(RedditApplication, on_delete=models.PROTECT, related_name='credentials',
-                            default=RedditApplication.singleton_instance_id)
 
     access_token = models.CharField(max_length=200)
     refresh_token = models.CharField(max_length=200)

@@ -1,8 +1,10 @@
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.contrib.auth import login
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
+from django.utils import timezone
 from praw import Reddit
 
-from sidewinder.identity.models import RedditApplication
+from sidewinder.identity.models import RedditApplication, User, RedditCredentials
 from sidewinder.utils import generate_state_token
 
 
@@ -36,6 +38,27 @@ def authorize_callback(request: HttpRequest):
         return JsonResponse({"error": "invalid state"})
 
     code = request.GET['code']
-    reddit.auth.authorize(code)
+    refresh_token = reddit.auth.authorize(code)
+    reddit_user = reddit.user.me()
 
-    return JsonResponse({"username": reddit.user.me().name})
+    try:
+        user = User.objects.get(uid=reddit_user.id)
+        login(request, user)
+
+        # noinspection PyProtectedMember
+        access_token = reddit._authorized_core._authorizer.access_token
+
+        creds, created = RedditCredentials.objects.get_or_create(
+            user=user,
+            defaults=dict(access_token=access_token, refresh_token=refresh_token, last_refresh=timezone.now())
+        )
+
+        if not created:
+            creds.access_token = access_token
+            creds.refresh_token = refresh_token
+            creds.last_refresh = timezone.now()
+            creds.save()
+    except User.DoesNotExist:
+        pass  # TODO: auto sign up
+
+    return HttpResponse(b"success, probably")

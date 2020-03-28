@@ -25,9 +25,4 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Reddit Applications',
             },
         ),
-        migrations.AddField(
-            model_name='redditcredentials',
-            name='app',
-            field=models.ForeignKey(default=sidewinder.identity.models.RedditApplication.singleton_instance_id, on_delete=django.db.models.deletion.PROTECT, related_name='credentials', to='identity.RedditApplication'),
-        ),
     ]
