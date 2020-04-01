@@ -5,6 +5,8 @@ import environ
 
 env = environ.Env()
 
+STATIC_ROOT = "static/"
+
 # CORS, CSRF & Security
 
 CORS_ORIGIN_WHITELIST = [
