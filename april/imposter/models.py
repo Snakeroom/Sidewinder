@@ -12,3 +12,6 @@ class KnownAnswer(models.Model):
     class Meta:
         verbose_name = 'Known Answer'
         verbose_name_plural = 'Known Answers'
+
+    def __str__(self):
+        return f"answer {self.pk}"

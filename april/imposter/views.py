@@ -66,6 +66,7 @@ def fetch_recent(request: HttpRequest):
     res = []
     for answer in recent_answers:
         res.append({
+            "id": answer.pk,
             "message": answer.message,
             "correct": answer.correct,
             "created": answer.created_at,
