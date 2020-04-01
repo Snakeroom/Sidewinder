@@ -22,6 +22,9 @@ from sidewinder.sneknet.channel_master import SneknetConsumer
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('identity/', include('sidewinder.identity.urls')),
+
+    # Yearly apps
+    path('y20/', include('april.imposter.urls')),
 ]
 
 socket_routes = URLRouter([

@@ -1,3 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
+from april.imposter.models import KnownAnswer
+
+
+@admin.register(KnownAnswer)
+class KnownAnswerAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'message', 'correct', 'seen_times', 'updated_at',)
