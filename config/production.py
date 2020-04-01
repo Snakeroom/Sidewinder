@@ -5,7 +5,7 @@ import environ
 
 env = environ.Env()
 
-STATIC_ROOT = "static/"
+STATIC_ROOT = env('STATIC_ROOT', default="static/")
 
 # CORS, CSRF & Security
 
