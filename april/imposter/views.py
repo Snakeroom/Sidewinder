@@ -43,11 +43,12 @@ def query_answers(request: HttpRequest):
         return JsonResponse({"error": "Missing 'options' key"}, status=400)
 
     answers = []
-    for opt in body["options"]:
+    for i, opt in enumerate(body["options"]):
         try:
             answer = KnownAnswer.objects.get(message__iexact=opt)
 
             answers.append({
+                "i": i,
                 "message": answer.message,
                 "correct": answer.correct,
             })
