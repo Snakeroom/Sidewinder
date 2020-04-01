@@ -13,11 +13,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from channels.routing import URLRouter
 from django.contrib import admin
 from django.urls import path, include
-
-from sidewinder.sneknet.channel_master import SneknetConsumer
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,7 +23,3 @@ urlpatterns = [
     # Yearly apps
     path('y20/', include('april.imposter.urls')),
 ]
-
-socket_routes = URLRouter([
-    path('', SneknetConsumer)
-])

@@ -12,7 +12,7 @@ import os
 from channels.routing import ProtocolTypeRouter
 from django.core.asgi import get_asgi_application
 
-from sidewinder.urls import socket_routes
+from sidewinder.sneknet.routes import socket_routes
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.production')
 
