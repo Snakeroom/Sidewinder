@@ -56,7 +56,7 @@ def query_answers(request: HttpRequest):
         except KnownAnswer.MultipleObjectsReturned:
             continue  # oh no
 
-    return answers
+    return JsonResponse({"answers": answers})
 
 @require_http_methods(["GET", "HEAD"])
 def fetch_recent(request: HttpRequest):
