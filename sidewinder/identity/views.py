@@ -1,5 +1,6 @@
 from django.contrib.auth import login
 from django.contrib import messages
+from django.core import serializers
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -75,3 +76,19 @@ def authorize_callback(request: HttpRequest):
         creds.save()
 
     return HttpResponseRedirect(redirect_to)
+
+
+def get_current_user(request):
+    if request.user.is_authenticated:
+        user: User = request.user
+
+        return JsonResponse({
+            "uid": user.uid,
+            "username": user.username,
+            "pronouns": user.pronouns,
+            "is_staff": user.is_staff,
+        })
+    else:
+        return JsonResponse({
+            "error": "Not signed in"
+        }, status=401)
