@@ -17,11 +17,22 @@ CSRF_TRUSTED_ORIGINS = [
     "api.snakeroom.org",
 ]
 
-# SECRET_KEY = TODO
+SECRET_KEY = env('SECRET_KEY')
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
     'default': env.db(default='postgresql:///sidewinder')
+}
+
+# Channels
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('localhost', 6397)]
+        }
+    }
 }

@@ -14,6 +14,14 @@ DATABASES = {
     }
 }
 
+# Channels
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+
 # CORS, CSRF & Security
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8000",

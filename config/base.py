@@ -26,10 +26,12 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
     'solo.apps.SoloAppConfig',
     'corsheaders',
+    'channels',
 ]
 
 LOCAL_APPS = [
     'sidewinder.identity.apps.IdentityConfig',
+    'sidewinder.sneknet.apps.SneknetConfig',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
@@ -64,6 +66,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'sidewinder.wsgi.application'
+ASGI_APPLICATION = 'sidewinder.asgi.application'
 
 # Security
 
