@@ -12,7 +12,7 @@ CORS_ORIGIN_WHITELIST = [
     "https://api.snakeroom.org",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
+ALLOWED_HOSTS = CSRF_TRUSTED_ORIGINS = [
     "snakeroom.org",
     "api.snakeroom.org",
 ]
