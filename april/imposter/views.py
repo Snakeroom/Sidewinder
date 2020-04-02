@@ -9,6 +9,7 @@ from sidewinder.sneknet.wrappers import has_valid_token
 
 
 @csrf_exempt
+@has_valid_token
 @require_http_methods(["POST"])
 def submit_known_answers(request: HttpRequest):
     body = json.load(request)
@@ -21,7 +22,9 @@ def submit_known_answers(request: HttpRequest):
         message = option_obj["message"]
         correct = option_obj["correct"]
 
-        answer, created = KnownAnswer.objects.get_or_create(message=message, defaults=dict(correct=correct))
+        answer, created = KnownAnswer.objects.get_or_create(
+            message=message,
+            defaults=dict(correct=correct, submitted_by=request.snek_token.owner))
         answer.seen_times += 1
         answer.save()
 

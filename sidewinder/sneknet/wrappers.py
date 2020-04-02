@@ -24,6 +24,7 @@ def has_valid_token(view_func):
         except Token.DoesNotExist:
             return JsonResponse({"error": "Invalid token!"}, status=403)
 
+        request.snek_token = perm
         return view_func(request)
 
     return wrapper
