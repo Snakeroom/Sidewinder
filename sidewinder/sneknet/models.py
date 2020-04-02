@@ -31,6 +31,10 @@ class MasterSwitch(SingletonModel):
         default=True,
         help_text='Enable overwriting of imposter-tagged messages to human if we get a conflicting report'
     )
+    enable_five_human_hiding = models.BooleanField(
+        default=False,
+        help_text='Enable to cause the /query endpoint to lie if it\'s going to return 5 incorrect answers'
+    )
 
     disable_unauthorized_queries = models.BooleanField(
         default=False,

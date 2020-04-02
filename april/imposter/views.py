@@ -83,6 +83,11 @@ def query_answers(request: HttpRequest):
         except KnownAnswer.MultipleObjectsReturned:
             continue  # oh no
 
+    should_lie = switch.enable_five_human_hiding or ('hide_five' in request.GET)
+    human_answers = [answer for answer in answers if not answer['correct']]
+    if should_lie and len(human_answers) == 5:
+        answers = answers[:-2]
+
     return JsonResponse({"answers": answers})
 
 @require_http_methods(["GET", "HEAD"])
