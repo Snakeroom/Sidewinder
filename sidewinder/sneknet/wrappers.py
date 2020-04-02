@@ -3,8 +3,14 @@ from django.http import HttpRequest, JsonResponse
 from sidewinder.sneknet.models import Token
 
 
-def has_valid_token(view_func):
+def has_valid_token_or_user(view_func):
     def wrapper(request: HttpRequest):
+        if request.user.is_authenticated:
+            if not request.user.is_active:
+                return JsonResponse({"error": "Account deactivated."}, status=403)
+
+            return view_func(request)
+
         if 'authorization' in request.headers:
             token = request.headers['authorization']
         elif 'token' in request.GET:

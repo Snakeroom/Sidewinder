@@ -5,17 +5,22 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from april.imposter.models import KnownAnswer
-from sidewinder.sneknet.wrappers import has_valid_token
+from sidewinder.sneknet.wrappers import has_valid_token_or_user
 
 
 @csrf_exempt
-@has_valid_token
+@has_valid_token_or_user
 @require_http_methods(["POST"])
 def submit_known_answers(request: HttpRequest):
     body = json.load(request)
 
     if "options" not in body:
         return JsonResponse({"error": "Missing 'options' key"}, status=400)
+
+    if hasattr(request, 'snek_token'):
+        submitter = request.snek_token.owner
+    else:
+        submitter = request.user
 
     seen = {}
     for option_obj in body["options"]:
@@ -24,7 +29,7 @@ def submit_known_answers(request: HttpRequest):
 
         answer, created = KnownAnswer.objects.get_or_create(
             message=message,
-            defaults=dict(correct=correct, submitted_by=request.snek_token.owner))
+            defaults=dict(correct=correct, submitted_by=submitter))
         answer.seen_times += 1
         answer.save()
 
