@@ -38,3 +38,6 @@ class MasterSwitch(SingletonModel):
     class Meta:
         verbose_name = "Master Switches"
         verbose_name_plural = "Master Switches"
+
+    def __str__(self):
+        return "Master Switches"
