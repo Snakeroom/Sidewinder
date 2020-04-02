@@ -12,6 +12,7 @@ class KnownAnswer(models.Model):
                                      null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    submission_tag = models.CharField(max_length=300, null=True, blank=True)
 
     class Meta:
         verbose_name = 'Known Answer'
