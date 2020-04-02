@@ -29,7 +29,8 @@ def submit_known_answers(request: HttpRequest):
 
         answer, created = KnownAnswer.objects.get_or_create(
             message=message,
-            defaults=dict(correct=correct, submitted_by=submitter))
+            defaults=dict(correct=correct, submitted_by=submitter, submission_tag=body.get("tag", None)),
+        )
         answer.seen_times += 1
         answer.save()
 
