@@ -27,11 +27,15 @@ class Token(models.Model):
 class MasterSwitch(SingletonModel):
     enable_all = models.BooleanField(default=True)
     enable_queries = models.BooleanField(default=True)
+    enable_imposter_flipping = models.BooleanField(
+        default=True,
+        help_text='Enable overwriting of imposter-tagged messages to human if we get a conflicting report'
+    )
 
-    # disable_authorized_queries = models.BooleanField(
-    #     default=False,
-    #     help_text='Tick this box to disable any requests to /query that are missing a valid token'
-    # )
+    disable_unauthorized_queries = models.BooleanField(
+        default=False,
+        help_text='Tick this box to disable any requests to /query that are missing a valid token'
+    )
 
     question_number = models.IntegerField(default=0)
 

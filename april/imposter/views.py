@@ -6,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 
 from april.imposter.models import KnownAnswer
 from sidewinder.sneknet.models import MasterSwitch
-from sidewinder.sneknet.wrappers import has_valid_token_or_user
+from sidewinder.sneknet.wrappers import has_valid_token_or_user, check_can_query
 
 
 @csrf_exempt
@@ -39,6 +39,9 @@ def submit_known_answers(request: HttpRequest):
                           question_number=switch.question_number),
         )
         answer.seen_times += 1
+        if switch.enable_imposter_flipping and not correct:
+            answer.correct = False  # Flips impostor to human but not the other way round
+
         update_list.append(answer)
 
         seen[answer.pk] = {
@@ -46,13 +49,14 @@ def submit_known_answers(request: HttpRequest):
             "message": answer.message,
         }
 
-    KnownAnswer.objects.bulk_update(update_list, ('seen_times',))
+    KnownAnswer.objects.bulk_update(update_list, ('seen_times', 'correct',))
 
     return JsonResponse({
         "seen": seen,
     })
 
 @csrf_exempt
+@check_can_query
 @require_http_methods(["POST"])
 def query_answers(request: HttpRequest):
     switch = MasterSwitch.get_solo()

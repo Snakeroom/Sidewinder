@@ -1,5 +1,6 @@
-# Sidewinder
-Sidewinder is the Snakeroom’s new permanent backend.
+# sidewinder
+
+sidewinder is the Snakeroom’s new permanent backend.
 
 It’s got all the useful features that we need every year built-in, and is extended as required for each year’s event.
 
