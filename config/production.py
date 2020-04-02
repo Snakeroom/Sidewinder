@@ -29,6 +29,15 @@ DATABASES = {
     'default': env.db(default='postgresql:///sidewinder')
 }
 
+# Cache
+
+CACHES = {
+    'default': env.cache(default='rediscache://localhost:6379/1')
+}
+
+SOLO_CACHE = 'default'
+SOLO_CACHE_TIMEOUT = 1200
+
 # Channels
 
 CHANNEL_LAYERS = {

@@ -13,6 +13,7 @@ class KnownAnswer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     submission_tag = models.CharField(max_length=300, null=True, blank=True)
+    question_number = models.IntegerField(default=0)
 
     class Meta:
         verbose_name = 'Known Answer'

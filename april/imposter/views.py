@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from april.imposter.models import KnownAnswer
+from sidewinder.sneknet.models import MasterSwitch
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
 
 
@@ -12,6 +13,10 @@ from sidewinder.sneknet.wrappers import has_valid_token_or_user
 @has_valid_token_or_user
 @require_http_methods(["POST"])
 def submit_known_answers(request: HttpRequest):
+    switch = MasterSwitch.get_solo()
+    if not switch.enable_all:
+        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+
     body = json.load(request)
 
     if "options" not in body:
@@ -23,21 +28,25 @@ def submit_known_answers(request: HttpRequest):
         submitter = request.user
 
     seen = {}
+    update_list = []
     for option_obj in body["options"]:
         message = option_obj["message"]
         correct = option_obj["correct"]
 
         answer, created = KnownAnswer.objects.get_or_create(
             message=message,
-            defaults=dict(correct=correct, submitted_by=submitter, submission_tag=body.get("tag", None)),
+            defaults=dict(correct=correct, submitted_by=submitter, submission_tag=body.get("tag", None),
+                          question_number=switch.question_number),
         )
         answer.seen_times += 1
-        answer.save()
+        update_list.append(answer)
 
         seen[answer.pk] = {
             "seen": not created,
             "message": answer.message,
         }
+
+    KnownAnswer.objects.bulk_update(update_list, ('seen_times',))
 
     return JsonResponse({
         "seen": seen,
@@ -46,6 +55,10 @@ def submit_known_answers(request: HttpRequest):
 @csrf_exempt
 @require_http_methods(["POST"])
 def query_answers(request: HttpRequest):
+    switch = MasterSwitch.get_solo()
+    if not switch.enable_queries or not switch.enable_all:
+        return JsonResponse({"error": "Querying temporarily disabled"}, status=503)
+
     body = json.load(request)
 
     if "options" not in body:
@@ -54,7 +67,7 @@ def query_answers(request: HttpRequest):
     answers = []
     for i, opt in enumerate(body["options"]):
         try:
-            answer = KnownAnswer.objects.get(message__iexact=opt)
+            answer = KnownAnswer.objects.get(message__exact=opt)
 
             answers.append({
                 "i": i,
@@ -70,6 +83,9 @@ def query_answers(request: HttpRequest):
 
 @require_http_methods(["GET", "HEAD"])
 def fetch_recent(request: HttpRequest):
+    if not MasterSwitch.get_solo().enable_all:
+        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+
     recent_answers = KnownAnswer.objects.order_by('-updated_at')[:5]
 
     res = []
@@ -86,12 +102,15 @@ def fetch_recent(request: HttpRequest):
 
 @require_http_methods(["GET", "HEAD"])
 def check_answer(request: HttpRequest):
+    if not MasterSwitch.get_solo().enable_all:
+        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+
     if 'q' not in request.GET:
         return JsonResponse({"error": "Missing query"}, status=400)
 
     query = request.GET['q']
     try:
-        answer = KnownAnswer.objects.get(message__iexact=query)
+        answer = KnownAnswer.objects.get(message__exact=query)
 
         return JsonResponse({
             "found": True,

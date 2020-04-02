@@ -1,3 +1,4 @@
+from solo.models import SingletonModel
 from django.db import models
 
 from sidewinder.identity.models import User
@@ -22,3 +23,18 @@ class Token(models.Model):
 
     def __str__(self):
         return self.friendly_name
+
+class MasterSwitch(SingletonModel):
+    enable_all = models.BooleanField(default=True)
+    enable_queries = models.BooleanField(default=True)
+
+    # disable_authorized_queries = models.BooleanField(
+    #     default=False,
+    #     help_text='Tick this box to disable any requests to /query that are missing a valid token'
+    # )
+
+    question_number = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Master Switches"
+        verbose_name_plural = "Master Switches"
