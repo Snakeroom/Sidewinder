@@ -1,12 +1,12 @@
 import json
 
-from django.http import HttpRequest, JsonResponse, HttpResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from april.imposter.models import KnownAnswer
-from sidewinder.sneknet.models import MasterSwitch
-from sidewinder.sneknet.wrappers import has_valid_token_or_user, check_can_query
+from april.imposter.models import KnownAnswer, MasterSwitch
+from april.imposter.wrappers import check_can_query
+from sidewinder.sneknet.wrappers import has_valid_token_or_user
 
 
 @csrf_exempt

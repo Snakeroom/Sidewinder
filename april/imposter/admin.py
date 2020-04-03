@@ -1,6 +1,7 @@
 from django.contrib import admin
+from solo.admin import SingletonModelAdmin
 
-from april.imposter.models import KnownAnswer
+from april.imposter.models import KnownAnswer, MasterSwitch
 from sidewinder.identity.models import User
 
 
@@ -27,3 +28,7 @@ class KnownAnswerAdmin(admin.ModelAdmin):
                 pass
 
         return super().get_search_results(request, queryset, search_term)
+
+@admin.register(MasterSwitch)
+class MasterSwitchAdmin(SingletonModelAdmin):
+    pass

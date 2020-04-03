@@ -1,10 +1,9 @@
-from django.contrib import admin
-from solo.admin import SingletonModelAdmin
-
-from sidewinder.sneknet.models import ScienceLog, Token, MasterSwitch
-
-import string
 import random
+import string
+
+from django.contrib import admin
+
+from sidewinder.sneknet.models import ScienceLog, Token
 
 _pool = string.digits + string.ascii_letters
 def generate_token():
@@ -33,7 +32,3 @@ class TokenAdmin(admin.ModelAdmin):
         initial['token'] = generate_token()
 
         return initial
-
-@admin.register(MasterSwitch)
-class MasterSwitchAdmin(SingletonModelAdmin):
-    pass
