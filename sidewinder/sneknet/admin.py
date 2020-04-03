@@ -18,6 +18,14 @@ class ScienceLogAdmin(admin.ModelAdmin):
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('friendly_name', 'active',)
     list_filter = ('active',)
+    actions = ('deactivate_all',)
+
+    def deactivate_all(self, request, queryset):
+        n = queryset.update(active=False)
+
+        self.message_user(request, f"Deactivated {n:d} token{'s' if n > 1 else ''}")
+
+    deactivate_all.short_description = "Deactivate all selected tokens"
 
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)
