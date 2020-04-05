@@ -2,8 +2,8 @@ FROM python:3.8
 
 WORKDIR /app
 
-COPY requirements_production.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements* /app
+RUN pip install --no-cache-dir -r requirements_production.txt
 
 COPY ./april /app
 COPY ./config /app
