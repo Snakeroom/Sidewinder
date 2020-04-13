@@ -1,5 +1,7 @@
 # Django production config file
 
+from .base import *
+
 import environ
 import sentry_sdk
 
