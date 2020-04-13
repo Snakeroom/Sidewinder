@@ -21,5 +21,5 @@ urlpatterns = [
     path('identity/', include('sidewinder.identity.urls')),
 
     # Yearly apps
-    path('y20/', include('april.imposter.urls')),
+    # path('y20/', include('april.imposter.urls')),
 ]
