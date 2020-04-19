@@ -1,13 +1,11 @@
-import random
-import string
+import secrets
 
 from django.contrib import admin
 
 from sidewinder.sneknet.models import ScienceLog, Token
 
-_pool = string.digits + string.ascii_letters
 def generate_token():
-    return "".join(random.choices(_pool, k=56))
+    return secrets.token_urlsafe(56)
 
 @admin.register(ScienceLog)
 class ScienceLogAdmin(admin.ModelAdmin):

@@ -1,5 +1,6 @@
 # Django production config file
 
+# noinspection PyUnresolvedReferences
 from .base import *
 
 import environ
