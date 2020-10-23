@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/
 import os
 
 from channels.routing import ProtocolTypeRouter
+from channels.auth import AuthMiddlewareStack
 from django.core.asgi import get_asgi_application
 
 from sidewinder.sneknet.routes import socket_routes
@@ -25,5 +26,5 @@ def make_django_asgi_app(scope):
 
 application = ProtocolTypeRouter({
     "http": make_django_asgi_app,
-    "websocket": socket_routes
+    "websocket": AuthMiddlewareStack(socket_routes)
 })

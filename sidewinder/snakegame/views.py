@@ -1,3 +1,4 @@
+from sidewinder.identity.models import User
 from channels.generic.websocket import JsonWebsocketConsumer
 
 import threading
@@ -51,8 +52,9 @@ def tick():
 threading.Timer(1 / 6, tick).start()
 
 class Snake:
-    def __init__(self, name: str, socket: JsonWebsocketConsumer, index: int):
-        self.name = name
+    def __init__(self, user: User, socket: JsonWebsocketConsumer, index: int):
+        self.user = user
+        self.name = user.username
         self.socket = socket
         self.index = index
         self.segments = [get_empty_position()]
@@ -109,9 +111,15 @@ class Snake:
 
 def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
     if content["action"] == "login":
+        if not "user" in socket.scope:
+            return socket.send_json({
+                "error": "not_authenticated"
+            })
+        user: User = socket.scope["user"]
+
         if not socket in snakes_by_socket:
             global global_index
-            snake = Snake(content.get("name", "Snake"), socket, global_index)
+            snake = Snake(user, socket, global_index)
             global_index += 1
 
             snakes_by_socket[socket] = snake
