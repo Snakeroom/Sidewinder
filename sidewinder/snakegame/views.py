@@ -1,4 +1,5 @@
 from sidewinder.identity.models import User
+from sidewinder.snakegame.models import SnakeGameServer
 from channels.generic.websocket import JsonWebsocketConsumer
 
 import threading
@@ -122,6 +123,10 @@ def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
         if user.uid in joined_users:
             return socket.send_json({
                 "error": "already_logged_in"
+            })
+        elif len(snakes) >= SnakeGameServer.get_solo().max_players:
+            return socket.send_json({
+                "error": "too_many_players"
             })
         elif not socket in snakes_by_socket:
             global global_index
