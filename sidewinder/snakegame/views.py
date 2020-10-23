@@ -5,6 +5,7 @@ import threading
 import random
 
 snakes = []
+joined_users = []
 snakes_by_socket = {}
 global_index = 0
 
@@ -80,6 +81,7 @@ class Snake:
 
         # Cleanup
         snakes.remove(self)
+        joined_users.remove(self.user.uid)
         snakes_by_socket.pop(self.socket)
     
     def tick(self):
@@ -117,12 +119,17 @@ def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
             })
         user: User = socket.scope["user"]
 
-        if not socket in snakes_by_socket:
+        if user.uid in joined_users:
+            return socket.send_json({
+                "error": "already_logged_in"
+            })
+        elif not socket in snakes_by_socket:
             global global_index
             snake = Snake(user, socket, global_index)
             global_index += 1
 
             snakes_by_socket[socket] = snake
+            joined_users.append(user.uid)
             snakes.append(snake)
 
             return socket.send_json({
