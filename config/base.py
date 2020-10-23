@@ -31,6 +31,7 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
     'sidewinder.identity.apps.IdentityConfig',
+    'sidewinder.snakegame.apps.SnakeGameConfig',
     'sidewinder.sneknet.apps.SneknetConfig',
 ]
 
