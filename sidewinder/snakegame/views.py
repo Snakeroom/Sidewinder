@@ -18,7 +18,7 @@ complementary_directions = {
 }
 
 def is_invalid_position(position: tuple):
-    return position[0] < 0 or position[1] < 0 or position[0] >= 40 or position[1] >= 30
+    return position[0] < 0 or position[1] < 0 or position[0] >= SnakeGameServer.get_solo().arena_width or position[1] >= SnakeGameServer.get_solo().arena_height
 
 def has_segment_at_position(position: tuple):
     for snake in snakes:
@@ -27,23 +27,30 @@ def has_segment_at_position(position: tuple):
                 return True
     return False
 
-def get_empty_position():
-    position = (random.randrange(0, 40), random.randrange(0, 30))
-    return get_empty_position() if has_segment_at_position(position) else position
+def is_position_occupied(position: tuple):
+    if has_segment_at_position(position):
+        return True
+    for food in foods:
+        if food == position:
+            return True
+    return False
 
-food = get_empty_position()
+def get_empty_position():
+    position = (random.randrange(0, SnakeGameServer.get_solo().arena_width), random.randrange(0, SnakeGameServer.get_solo().arena_height))
+    return get_empty_position() if is_position_occupied(position) else position
+
+foods = []
 
 def tick():
     for snake in snakes:
         snake.tick()
 
-    global food
-    if food == None:
-        food = get_empty_position()
+    if len(foods) < SnakeGameServer.get_solo().food_amount:
+        foods.append(get_empty_position())
 
     update_packet = {
         "action": "update",
-        "food": food,
+        "food": foods[0],
         "snakes": list(map(Snake.getNetworkInfo, snakes))
     }
     for snake in snakes:
@@ -59,7 +66,9 @@ class Snake:
         self.name = user.username
         self.socket = socket
         self.index = index
+        self.score = 0
         self.segments = [get_empty_position()]
+        self.segments_to_add = SnakeGameServer.get_solo().initial_segments
         self.direction = 0
         self.previous_direction = 0
 
@@ -77,13 +86,18 @@ class Snake:
     def end(self):
         self.socket.send_json({
             "action": "end",
-            "score": len(self.segments) - 4
+            "score": self.score
         }, close=True)
 
         # Cleanup
         snakes.remove(self)
         joined_users.remove(self.user.uid)
         snakes_by_socket.pop(self.socket)
+    
+    def can_add_segment(self):
+        if SnakeGameServer.get_solo().max_segments == None:
+            return True
+        return len(self.segments) <= SnakeGameServer.get_solo().max_segments
     
     def tick(self):
         # End game for player if they end up in an invalid position
@@ -95,12 +109,15 @@ class Snake:
         self.segments.append(next_segment)
 
         # Handle eating food
-        global food
-        ate_food = next_segment == food
-        if ate_food:
-            food = None
+        for food in foods:
+            if next_segment == food:
+                self.score += SnakeGameServer.get_solo().food_score
+                self.segments_to_add += SnakeGameServer.get_solo().food_score
+                foods.remove(food)
 
-        if len(self.segments) > 4 and not ate_food:
+        if self.segments_to_add > 0 and self.can_add_segment():
+            self.segments_to_add -= 1
+        else:
             self.segments.pop(0)
 
         self.previous_direction = self.direction
@@ -109,7 +126,8 @@ class Snake:
         return {
             "index": self.index,
             "name": self.name,
-            "segments": self.segments
+            "segments": self.segments,
+            "score": self.score
         }
 
 def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
