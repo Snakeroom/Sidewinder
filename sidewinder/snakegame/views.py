@@ -116,18 +116,21 @@ def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
     if content["action"] == "login":
         if not "user" in socket.scope:
             return socket.send_json({
-                "error": "not_authenticated"
-            })
+                "error": "not_authenticated",
+                "message": "You must be authenticated"
+            }, close=True)
         user: User = socket.scope["user"]
 
         if user.uid in joined_users:
             return socket.send_json({
-                "error": "already_logged_in"
-            })
+                "error": "already_logged_in",
+                "message": "You are already logged in!"
+            }, close=True)
         elif len(snakes) >= SnakeGameServer.get_solo().max_players:
             return socket.send_json({
-                "error": "too_many_players"
-            })
+                "error": "too_many_players",
+                "message": f"Too many players (maximum: {SnakeGameServer.get_solo().max_players})"
+            }, close=True)
         elif not socket in snakes_by_socket:
             global global_index
             snake = Snake(user, socket, global_index)
@@ -144,8 +147,9 @@ def handle_snakegame(socket: JsonWebsocketConsumer, content: dict):
             })
     elif not socket in snakes_by_socket:
         return socket.send_json({
-            "error": "not_logged_in"
-        })
+            "error": "not_logged_in",
+            "message": "You must be logged in to perform actions"
+        }, close=True)
     elif content["action"] == "set_direction":
         direction = max(0, min(3, content.get("direction", 0)))
 
