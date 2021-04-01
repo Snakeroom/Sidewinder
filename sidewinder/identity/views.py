@@ -1,14 +1,14 @@
-from django.contrib.auth import login
 from django.contrib import messages
-from django.core import serializers
+from django.contrib.auth import login
 from django.http import HttpRequest, HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from praw import Reddit
 
 from sidewinder.identity.models import RedditApplication, User, RedditCredentials
 from sidewinder.utils import generate_state_token
-
 
 def _build_reddit(request: HttpRequest) -> Reddit:
     app = RedditApplication.get_solo()
@@ -92,3 +92,23 @@ def get_current_user(request):
         return JsonResponse({
             "error": "Not signed in"
         }, status=401)
+
+
+@require_POST
+@csrf_exempt
+def edit_profile(request):
+    if request.user.is_anonymous:
+        return JsonResponse({
+            "error": "Not signed in."
+        }, status=401)
+
+    try:
+        pronouns = request.POST['pronouns']
+
+        request.user.pronouns = str(pronouns)
+    except KeyError:
+        pass
+
+    request.user.save(update_fields=['pronouns'])
+
+    return HttpResponse(status=204)
