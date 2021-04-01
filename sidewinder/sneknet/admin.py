@@ -2,7 +2,7 @@ import secrets
 
 from django.contrib import admin
 
-from sidewinder.sneknet.models import ScienceLog, Token
+from sidewinder.sneknet.models import ScienceLog, Token, UserScript
 
 def generate_token():
     return secrets.token_urlsafe(56)
@@ -30,3 +30,9 @@ class TokenAdmin(admin.ModelAdmin):
         initial['token'] = generate_token()
 
         return initial
+
+@admin.register(UserScript)
+class UserScriptAdmin(admin.ModelAdmin):
+    list_display = ('name', 'version', 'recommended',)
+    list_filter = ('recommended', 'force_disable',)
+

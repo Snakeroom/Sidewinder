@@ -1,8 +1,7 @@
 from channels.generic.websocket import JsonWebsocketConsumer
 from django.http import HttpRequest, JsonResponse
 
-from sidewinder.sneknet.models import ScienceLog, Token
-
+from sidewinder.sneknet.models import ScienceLog, Token, UserScript
 
 def handle_science(socket: JsonWebsocketConsumer, content):
     if "uuid" not in content or "total" not in content:
@@ -28,4 +27,23 @@ def get_owned_tokens(request: HttpRequest):
 
     return JsonResponse({
         "tokens": tokens,
+    })
+
+def get_user_scripts(request: HttpRequest):
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            "error": "Not signed in."
+        }, status=401)
+
+    scripts = [{
+        "name": script.name,
+        "description": script.description,
+        "location": script.location,
+        "version": script.version,
+        "recommended": script.recommended,
+        "force_disable": script.force_disable,
+    } for script in UserScript.objects.all()]
+
+    return JsonResponse({
+        "scripts": scripts,
     })
