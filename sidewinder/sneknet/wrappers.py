@@ -1,5 +1,6 @@
 from django.http import HttpRequest, JsonResponse
 
+from april.imposter.models import MasterSwitch
 from sidewinder.sneknet.models import Token
 
 
@@ -35,5 +36,14 @@ def _check_authorized(request: HttpRequest, view_func):
 def has_valid_token_or_user(view_func):
     def wrapper(request: HttpRequest):
         return _check_authorized(request, view_func)
+
+    return wrapper
+
+def check_can_query(view_func):
+    def wrapper(request: HttpRequest):
+        if MasterSwitch.get_solo().disable_unauthorized_queries:
+            return _check_authorized(request, view_func)
+        else:
+            return view_func(request)
 
     return wrapper
