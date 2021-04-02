@@ -15,7 +15,7 @@ class ScienceLogAdmin(admin.ModelAdmin):
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('friendly_name', 'active',)
     list_filter = ('active',)
-    actions = ('deactivate_all',)
+    actions = ('deactivate_all', 'activate_all',)
 
     def deactivate_all(self, request, queryset):
         n = queryset.update(active=False)
