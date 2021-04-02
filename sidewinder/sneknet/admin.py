@@ -24,6 +24,13 @@ class TokenAdmin(admin.ModelAdmin):
 
     deactivate_all.short_description = "Deactivate all selected tokens"
 
+    def activate_all(self, request, queryset):
+        n = queryset.update(active=True)
+
+        self.message_user(request, f"Activated {n:d} tokens{'s' if n > 1 else ''}")
+
+    activate_all.short_description = "Activate all selected tokens"
+
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)
 
