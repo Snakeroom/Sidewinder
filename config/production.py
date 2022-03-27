@@ -24,12 +24,12 @@ STATIC_ROOT = env('STATIC_ROOT', default="static/")
 
 # CORS, CSRF & Security
 
-CORS_ORIGIN_WHITELIST = [
+CORS_ORIGIN_WHITELIST = CSRF_TRUSTED_ORIGINS = [
     "https://snakeroom.org",
     "https://api.snakeroom.org",
 ]
 
-ALLOWED_HOSTS = CSRF_TRUSTED_ORIGINS = [
+ALLOWED_HOSTS = [
     "snakeroom.org",
     "api.snakeroom.org",
 ]

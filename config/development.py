@@ -23,14 +23,9 @@ CHANNEL_LAYERS = {
 }
 
 # CORS, CSRF & Security
-CORS_ORIGIN_WHITELIST = [
+CORS_ORIGIN_WHITELIST = CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:3000",
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "localhost:8000",
-    "localhost:3000",
 ]
 
 ALLOWED_HOSTS = []
