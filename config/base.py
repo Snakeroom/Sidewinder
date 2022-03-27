@@ -32,6 +32,7 @@ DJANGO_APPS = [
 LOCAL_APPS = [
     'sidewinder.identity.apps.IdentityConfig',
     'sidewinder.sneknet.apps.SneknetConfig',
+    'april.place.apps.PlaceConfig',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
