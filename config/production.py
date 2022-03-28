@@ -27,6 +27,7 @@ STATIC_ROOT = env('STATIC_ROOT', default="static/")
 CORS_ORIGIN_WHITELIST = CSRF_TRUSTED_ORIGINS = [
     "https://snakeroom.org",
     "https://api.snakeroom.org",
+    "https://hot-potato.reddit.com",
 ]
 
 ALLOWED_HOSTS = [
