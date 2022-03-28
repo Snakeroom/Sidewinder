@@ -27,4 +27,5 @@ urlpatterns = [
     # Yearly apps
     # path('y20/', include('april.imposter.urls')),
     # path('y21/', include('april.second.urls')),
+    path('y22/', include('april.place.urls')),
 ]
