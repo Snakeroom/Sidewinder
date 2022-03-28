@@ -37,6 +37,9 @@ ALLOWED_HOSTS = [
 
 SECRET_KEY = env('SECRET_KEY')
 
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
