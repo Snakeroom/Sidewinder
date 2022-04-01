@@ -1,10 +1,10 @@
 from django.http import HttpRequest, JsonResponse
 
-from april.imposter.models import MasterSwitch
+# from april.imposter.models import MasterSwitch
 from sidewinder.sneknet.models import Token
 
 
-def _check_authorized(request: HttpRequest, view_func):
+def _check_authorized(request: HttpRequest, view_func, kwargs):
     if request.user.is_authenticated:
         if not request.user.is_active:
             return JsonResponse({"error": "Account deactivated."}, status=403)
@@ -31,19 +31,19 @@ def _check_authorized(request: HttpRequest, view_func):
         return JsonResponse({"error": "Invalid token!"}, status=403)
 
     request.snek_token = perm
-    return view_func(request)
+    return view_func(request, **kwargs)
 
 def has_valid_token_or_user(view_func):
-    def wrapper(request: HttpRequest):
-        return _check_authorized(request, view_func)
+    def wrapper(request: HttpRequest, **kwargs):
+        return _check_authorized(request, view_func, kwargs)
 
     return wrapper
 
 def check_can_query(view_func):
     def wrapper(request: HttpRequest):
-        if MasterSwitch.get_solo().disable_unauthorized_queries:
-            return _check_authorized(request, view_func)
-        else:
-            return view_func(request)
+        # if MasterSwitch.get_solo().disable_unauthorized_queries:
+        #     return _check_authorized(request, view_func)
+        # else:
+        return view_func(request)
 
     return wrapper

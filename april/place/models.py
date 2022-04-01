@@ -4,6 +4,25 @@ from sidewinder.identity.models import User
 import struct
 import uuid
 
+PALETTE = [
+    0xff4500,
+    0xffa800,
+    0xffd635,
+    0x00a368,
+    0x7eed56,
+    0x2450a4,
+    0x3690ea,
+    0x51e9f4,
+    0x811e9f,
+    0xb44ac0,
+    0xff99aa,
+    0x9c6926,
+    0x000000,
+    0x898d90,
+    0xd4d7d9,
+    0xffffff,
+]
+
 class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
@@ -39,7 +58,7 @@ class ProjectDivision(models.Model):
         return f"{self.project.name} - {self.uuid}"
 
     def unpack_header(self):
-        return struct.unpack(">HHHH", self.content)
+        return struct.unpack(">HHHH", self.content[:8])
 
     def get_origin(self) -> (int, int):
         """
@@ -58,4 +77,4 @@ class ProjectDivision(models.Model):
         return size[0], size[1]
 
     def get_image_bytes(self) -> bytes:
-        return self.content[4:]
+        return self.content[8:]
