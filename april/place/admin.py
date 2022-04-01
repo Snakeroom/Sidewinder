@@ -6,7 +6,7 @@ from .models import Project, ProjectDivision
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ('name', 'uuid', 'featured', 'approved')
-    list_filter = ('featured',)
+    list_filter = ('featured', 'approved')
 
 
 @admin.register(ProjectDivision)
