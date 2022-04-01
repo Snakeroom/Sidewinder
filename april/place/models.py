@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.db import models
 from sidewinder.identity.models import User
 
@@ -60,6 +61,7 @@ class ProjectDivision(models.Model):
     def unpack_header(self):
         return struct.unpack(">HHHH", self.content[:8])
 
+    @admin.display(description="Origin")
     def get_origin(self) -> (int, int):
         """
         Get the origin of this layer
@@ -68,6 +70,7 @@ class ProjectDivision(models.Model):
         pos = self.unpack_header()[:2]
         return pos[0], pos[1]
 
+    @admin.display(description="Dimensions")
     def get_dimensions(self) -> (int, int):
         """
         Get the size of this layer
@@ -78,3 +81,14 @@ class ProjectDivision(models.Model):
 
     def get_image_bytes(self) -> bytes:
         return bytes(self.content[8:])
+
+    def count_image_pixels(self) -> int:
+        img = self.get_image_bytes()
+        width, height = self.get_dimensions()
+
+        count = 0
+        for i in range(0, width * height):
+            if img[i] != 0xFF:
+                count += 1
+
+        return count

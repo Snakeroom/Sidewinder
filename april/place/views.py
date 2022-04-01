@@ -3,7 +3,7 @@ from io import BytesIO
 from uuid import UUID
 
 from PIL import Image
-from django.http import HttpRequest, JsonResponse, FileResponse
+from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
@@ -54,7 +54,7 @@ def join_project(request: HttpRequest, uuid: UUID):
 @require_http_methods(["POST"])
 @csrf_exempt
 @has_valid_token_or_user
-def create_division(request: HttpRequest, project_uuid: UUID):
+def create_division(request: HttpRequest, uuid: UUID):
     user = request.snek_token.owner
 
     # TODO: better permissions
@@ -62,7 +62,7 @@ def create_division(request: HttpRequest, project_uuid: UUID):
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
     try:
-        project = Project.objects.get(uuid=project_uuid)
+        project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
 
@@ -100,6 +100,53 @@ def get_bitmap(request: HttpRequest):
 
                 rgb = PALETTE[colour_index]
                 canvas.putpixel((ox + x, oy + y), split_rgb(rgb))
+
+    io = BytesIO()
+    canvas.save(io, "png")
+
+    io.seek(0)
+    return FileResponse(io, filename="bitmap.png", headers={
+        "Content-Type": "image/png",
+    })
+
+@require_safe
+def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
+    try:
+        project = Project.objects.get(uuid=uuid)
+    except Project.DoesNotExist:
+        return HttpResponse(b"Project with that UUID does not exist", status=400)
+
+    min_x = min_y = 1000
+    max_x = max_y = 0
+    for div in project.projectdivision_set.all():
+        x, y = div.get_origin()
+        min_x = min(min_x, x)
+        min_y = min(min_y, y)
+
+        width, height = div.get_dimensions()
+        max_x = max(max_x, x + width)
+        max_y = max(max_y, y + height)
+
+    if min_x > max_x or min_y > max_y:
+        return HttpResponse(b"Project has no image data", status=400)
+
+    width, height = max_x - min_x, max_y - min_y
+    canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
+
+    for div in project.projectdivision_set.all():
+        ox, oy = div.get_origin()
+        width, height = div.get_dimensions()
+        mx, my = ox - min_x, oy - min_y
+
+        for y in range(0, height):
+            for x in range(0, width):
+                index = (width * y) + x
+                colour_index = div.get_image_bytes()[index]
+                if colour_index == 0xFF:
+                    continue
+
+                rgb = PALETTE[colour_index]
+                canvas.putpixel((mx + x, my + y), split_rgb(rgb))
 
     io = BytesIO()
     canvas.save(io, "png")

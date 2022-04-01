@@ -16,6 +16,7 @@ class IdentityUserChangeForm(UserChangeForm):
 class UserAdmin(admin.ModelAdmin):
     form = IdentityUserChangeForm
     list_display = ('username', 'uid', 'pronouns',)
+    list_filter = ('is_staff', 'is_active',)
     readonly_fields = ('uid',)
     change_password_form = AdminPasswordChangeForm
     change_user_password_template = None
