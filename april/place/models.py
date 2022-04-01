@@ -25,7 +25,7 @@ def default_division_bytes():
 class ProjectDivision(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    priority = models.IntegerField(help_text="Lower is better")
+    priority = models.IntegerField(help_text="Higher is better")
     enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them", default=True)
     content = models.BinaryField(help_text="Image data", editable=False, default=default_division_bytes)
 
