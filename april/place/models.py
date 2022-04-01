@@ -8,11 +8,15 @@ class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
     users = models.ManyToManyField(User, related_name='place_projects', blank=True)
-    featured = models.BooleanField(verbose_name='Featured Project', help_text='Gives the project special priority - '
-                                        'shown to unauthenticated users, has a higher chance of being picked')
+    featured = models.BooleanField(
+        verbose_name='Featured Project',
+        help_text='Gives the project special priority - shown to unauthenticated users, has a higher chance of being picked',
+        default=False
+    )
+
     show_user_count = models.BooleanField(verbose_name='Show User Count', help_text='Whether to publicly show the '
                                           'number of users joined to this project', default=True)
-    approved = models.BinaryField(help_text="Project approved by admin", default=False)
+    approved = models.BooleanField(help_text="Project approved by admin", default=False)
 
 
     def __str__(self):
