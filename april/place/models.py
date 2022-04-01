@@ -77,4 +77,4 @@ class ProjectDivision(models.Model):
         return size[0], size[1]
 
     def get_image_bytes(self) -> bytes:
-        return self.content[8:]
+        return bytes(self.content[8:])
