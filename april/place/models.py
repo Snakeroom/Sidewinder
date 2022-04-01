@@ -8,10 +8,12 @@ class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
     users = models.ManyToManyField(User, related_name='place_projects', blank=True)
-    high_priority = models.BooleanField(verbose_name='High Priority', help_text='Gives the project special priority - '
+    featured = models.BooleanField(verbose_name='Featured Project', help_text='Gives the project special priority - '
                                         'shown to unauthenticated users, has a higher chance of being picked')
     show_user_count = models.BooleanField(verbose_name='Show User Count', help_text='Whether to publicly show the '
                                           'number of users joined to this project', default=True)
+    approved = models.BinaryField(help_text="Project approved by admin", default=False)
+
 
     def __str__(self):
         return self.name
@@ -24,6 +26,7 @@ class ProjectDivision(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     priority = models.IntegerField(help_text="Lower is better")
+    enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them", default=True)
     content = models.BinaryField(help_text="Image data", editable=False, default=default_division_bytes)
 
     # content is big-endian 4 shorts header followed by bytearray of data
