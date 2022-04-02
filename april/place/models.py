@@ -23,6 +23,14 @@ PALETTE = [
     0x898d90,
     0xd4d7d9,
     0xffffff,
+    0xbe0039,
+    0x00cc78,
+    0x00756f,
+    0x009eaa,
+    0x493ac1,
+    0x6a5cff,
+    0xff3881,
+    0x6d482f,
 ]
 
 class CanvasSettings(SingletonModel):
