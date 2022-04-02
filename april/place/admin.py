@@ -1,7 +1,9 @@
 from django.contrib import admin
+from solo.admin import SingletonModelAdmin
 
-from .models import Project, ProjectDivision
+from .models import Project, ProjectDivision, CanvasSettings
 
+admin.site.register(CanvasSettings, SingletonModelAdmin)
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):

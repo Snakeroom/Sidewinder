@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.db import models
 from sidewinder.identity.models import User
+from solo.models import SingletonModel
 
 import struct
 import uuid
@@ -23,6 +24,16 @@ PALETTE = [
     0xd4d7d9,
     0xffffff,
 ]
+
+class CanvasSettings(SingletonModel):
+    canvas_width = models.IntegerField(default=1000)
+    canvas_height = models.IntegerField(default=1000)
+
+    def __str__(self):
+        return "Canvas Settings"
+
+    class Meta:
+        verbose_name = "Canvas Settings"
 
 class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

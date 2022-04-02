@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
-from .models import Project, ProjectDivision, PALETTE
+from .models import Project, ProjectDivision, PALETTE, CanvasSettings
 
 @require_safe
 def get_projects(request: HttpRequest):
@@ -85,7 +85,8 @@ def split_rgb(rgb):
 
 @require_safe
 def get_bitmap(request: HttpRequest):
-    canvas = Image.new('RGBA', (1000, 1000), (255, 255, 255, 0))
+    settings = CanvasSettings.get_solo()
+    canvas = Image.new('RGBA', (settings.canvas_width, settings.canvas_height), (255, 255, 255, 0))
 
     for div in ProjectDivision.objects.all():
         ox, oy = div.get_origin()
@@ -116,7 +117,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     except Project.DoesNotExist:
         return HttpResponse(b"Project with that UUID does not exist", status=400)
 
-    min_x = min_y = 1000
+    min_x = min_y = 10000  # stupid high value
     max_x = max_y = 0
     for div in project.projectdivision_set.all():
         x, y = div.get_origin()
