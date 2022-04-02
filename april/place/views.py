@@ -93,8 +93,8 @@ def get_bitmap(request: HttpRequest):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
 
-        for y in range(0, height):
-            for x in range(0, width):
+        for y in range(0, min(height, canvas.height-oy)):
+            for x in range(0, min(width, canvas.width-ox)):
                 index = (width * y) + x
                 colour_index = div.get_image_bytes()[index]
                 if colour_index == 0xFF:
