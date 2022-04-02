@@ -21,6 +21,8 @@ def get_projects(request: HttpRequest):
         if request.user.is_authenticated:
             result['joined'] = project.users.contains(request.user)
 
+        result['featured'] = project.high_priority
+
         return result
 
     return JsonResponse({
