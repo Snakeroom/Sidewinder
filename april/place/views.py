@@ -47,7 +47,9 @@ def get_projects(request: HttpRequest):
             project_x, project_y, _, _ = project_dimensions
             result['x'] = project_x
             result['y'] = project_y
-
+            
+        result['featured'] = project.high_priority
+        
         return result
 
     return JsonResponse({
@@ -119,8 +121,8 @@ def get_bitmap(request: HttpRequest):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
 
-        for y in range(0, height):
-            for x in range(0, width):
+        for y in range(0, min(height, canvas.height-oy)):
+            for x in range(0, min(width, canvas.width-ox)):
                 index = (width * y) + x
                 colour_index = div.get_image_bytes()[index]
                 if colour_index == 0xFF:
