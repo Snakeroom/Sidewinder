@@ -10,6 +10,26 @@ from django.views.decorators.http import require_http_methods, require_safe
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
 from .models import Project, ProjectDivision, PALETTE, CanvasSettings
 
+def get_project_dimensions(project: Project):
+    settings = CanvasSettings.get_solo()
+    min_x, min_y = settings.canvas_width, settings.canvas_height
+    max_x = max_y = 0
+
+    for division in project.projectdivision_set.all():
+        x, y = division.get_origin()
+        min_x = min(min_x, x)
+        min_y = min(min_y, y)
+
+        width, height = division.get_dimensions()
+        max_x = max(max_x, x + width)
+        max_y = max(max_y, y + height)
+
+    if min_x > max_x or min_y > max_y:
+        return None
+    else:
+        return min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+
+
 @require_safe
 def get_projects(request: HttpRequest):
     def to_json(project):
@@ -21,8 +41,15 @@ def get_projects(request: HttpRequest):
         if request.user.is_authenticated:
             result['joined'] = project.users.contains(request.user)
 
-        result['featured'] = project.high_priority
+        project_dimensions = get_project_dimensions(project)
 
+        if project_dimensions:
+            project_x, project_y, _, _ = project_dimensions
+            result['x'] = project_x
+            result['y'] = project_y
+            
+        result['featured'] = project.high_priority
+        
         return result
 
     return JsonResponse({
@@ -119,27 +146,19 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     except Project.DoesNotExist:
         return HttpResponse(b"Project with that UUID does not exist", status=400)
 
-    min_x = min_y = 10000  # stupid high value
-    max_x = max_y = 0
-    for div in project.projectdivision_set.all():
-        x, y = div.get_origin()
-        min_x = min(min_x, x)
-        min_y = min(min_y, y)
+    projectDimensions = get_project_dimensions(project)
 
-        width, height = div.get_dimensions()
-        max_x = max(max_x, x + width)
-        max_y = max(max_y, y + height)
-
-    if min_x > max_x or min_y > max_y:
+    if projectDimensions is None:
         return HttpResponse(b"Project has no image data", status=400)
 
-    width, height = max_x - min_x, max_y - min_y
+    projectX, projectY, width, height = projectDimensions
+    
     canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
     for div in project.projectdivision_set.all():
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
-        mx, my = ox - min_x, oy - min_y
+        mx, my = ox - projectX, oy - projectY
 
         for y in range(0, height):
             for x in range(0, width):
