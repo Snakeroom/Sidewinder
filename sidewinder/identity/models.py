@@ -43,8 +43,8 @@ class User(AbstractBaseUser, PermissionsMixin, UserMixin):
 class RedditApplication(SingletonModel):
     name = models.CharField(max_length=72)
 
-    client_id = models.CharField(max_length=14)
-    client_secret = models.CharField(max_length=27)
+    client_id = models.CharField(max_length=22)
+    client_secret = models.CharField(max_length=30)
 
     class Meta:
         verbose_name = 'Reddit Application'
