@@ -13,22 +13,6 @@ from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRo
 
 @require_http_methods(['GET'])
 def manage_project(request: HttpRequest, uuid):
-    def user_is_member(user, current_project):
-        try:
-            ProjectRole.objects.get(user=user, project=current_project)
-            return True
-        except ProjectRole.DoesNotExist:
-            return False
-
-    def user_is_manager(user, current_project):
-        if user.is_staff:
-            return True
-        elif user_is_member(user, current_project):
-            try:
-                ProjectRole.objects.get(user=user, project=current_project, )
-                return True
-            except ProjectRole.DoesNotExist:
-                return False
 
     if request.method == "GET":
 
@@ -40,8 +24,8 @@ def manage_project(request: HttpRequest, uuid):
                           featured=current_project.high_priority,
                           can_edit=False)
             if request.user.is_authenticated:
-                result['joined'] = user_is_member(request.user, current_project)
-                if user_is_manager(request.user, current_project):
+                result['joined'] = current_project.user_is_member(request.user)
+                if current_project.user_is_manager(request.user):
                     result['can_edit'] = True
                     members = [{"uid": member.user.uid, "username": member.user.username, "role": member.role}
                                for member in project_permissions]
@@ -90,10 +74,10 @@ def get_projects(request: HttpRequest):
         result = dict(uuid=project.uuid, name=project.name)
 
         if project.show_user_count:
-            result['members'] = project.count_users()
+            result['members'] = project.get_user_count()
 
         if request.user.is_authenticated:
-            result['joined'] = project.users.contains(request.user)
+            result['joined'] = project.user_is_member(request.user)
 
         project_dimensions = get_project_dimensions(project)
 
@@ -123,15 +107,15 @@ def join_project(request: HttpRequest, uuid: UUID):
         return JsonResponse({"error": "Project with that UUID doesn't exist!"}, status=400)
 
     if request.method == "PUT":
-        if project.users.contains(request.user):
+        if project.user_is_member(request.user):
             return JsonResponse({"error": "Already in project"}, status=400)
 
-        project.users.add(request.user)
+        ProjectRole(user=request.user, project=project, role='user').save()
     else:
-        if not project.users.contains(request.user):
+        if not project.user_is_member(request.user):
             return JsonResponse({"error": "Not in project"}, status=400)
 
-        project.users.remove(request.user)
+        ProjectRole.objects.filter(user=request.user, project=project).delete()
 
     return JsonResponse({"message": "OK"}, status=200)
 

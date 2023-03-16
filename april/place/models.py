@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib import admin
 from django.db import models
+from django.db.models import Q
 from solo.models import SingletonModel
 
 from sidewinder.identity.models import User
@@ -68,6 +69,23 @@ class Project(models.Model):
 
     def get_user_count(self):
         return ProjectRole.objects.filter(project=self).count()
+
+    def user_is_member(self, user):
+        try:
+            ProjectRole.objects.get(user=user, project=self)
+            return True
+        except ProjectRole.DoesNotExist:
+            return False
+
+    def user_is_manager(self, user):
+        if user.is_staff:
+            return True
+        elif self.user_is_member(user):
+            try:
+                ProjectRole.objects.filter(user=user, project=self).get(Q(role='owner') | Q(role='manager'))
+                return True
+            except ProjectRole.DoesNotExist:
+                return False
 
 
 class ProjectRole(models.Model):
