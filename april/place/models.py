@@ -1,10 +1,11 @@
-from django.contrib import admin
-from django.db import models
-from sidewinder.identity.models import User
-from solo.models import SingletonModel
-
 import struct
 import uuid
+
+from django.contrib import admin
+from django.db import models
+from solo.models import SingletonModel
+
+from sidewinder.identity.models import User
 
 PALETTE = [
     0xff4500,
@@ -33,6 +34,7 @@ PALETTE = [
     0x6d482f,
 ]
 
+
 class CanvasSettings(SingletonModel):
     canvas_width = models.IntegerField(default=1000)
     canvas_height = models.IntegerField(default=1000)
@@ -43,10 +45,10 @@ class CanvasSettings(SingletonModel):
     class Meta:
         verbose_name = "Canvas Settings"
 
+
 class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
-    users = models.ManyToManyField(User, related_name='place_projects', blank=True)
     high_priority = models.BooleanField(
         verbose_name='Featured Project',
         help_text='Gives the project special priority - shown to unauthenticated users, '
@@ -54,22 +56,42 @@ class Project(models.Model):
         default=False
     )
 
-    show_user_count = models.BooleanField(verbose_name='Show User Count', help_text='Whether to publicly show the '
-                                          'number of users joined to this project', default=True)
+    show_user_count = models.BooleanField(verbose_name='Show User Count',
+                                          help_text='Whether to publicly show the '
+                                                    'number of users joined to this '
+                                                    'project',
+                                          default=True)
     approved = models.BooleanField(help_text="Project approved by admin", default=False)
 
     def __str__(self):
         return self.name
 
+    def get_user_count(self):
+        return ProjectRole.objects.filter(project=self).count()
+
+
+class ProjectRole(models.Model):
+    def __str__(self):
+        return f"{self.project} - {self.user} - {self.role}"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    role = models.CharField(max_length=7, choices=[('owner', 'Owner'), ('manager', 'Manager'), ('user', 'User')],
+                            default='user')
+
+
 def default_division_bytes():
     # pos 0, 0; size 0, 0; no data
     return b"\x00\x00\x00\x00\x00\x00\x00\x00"
 
+
 class ProjectDivision(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    division_name = models.CharField(max_length=256)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    priority = models.IntegerField(help_text="Higher is better")
-    enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them", default=True)
+    priority = models.IntegerField(help_text="A higher number receives priority")
+    enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them",
+                                  default=True)
     content = models.BinaryField(help_text="Image data", editable=False, default=default_division_bytes)
 
     # content is big-endian 4 shorts header followed by bytearray of data
