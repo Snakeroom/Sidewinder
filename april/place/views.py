@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods, require_safe
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
 from .models import Project, ProjectDivision, PALETTE, CanvasSettings
 
+
 def get_project_dimensions(project: Project):
     settings = CanvasSettings.get_solo()
     min_x, min_y = settings.canvas_width, settings.canvas_height
@@ -47,14 +48,17 @@ def get_projects(request: HttpRequest):
             project_x, project_y, _, _ = project_dimensions
             result['x'] = project_x
             result['y'] = project_y
-            
+        else:
+            result['has_image'] = False
+
         result['featured'] = project.high_priority
-        
+
         return result
 
     return JsonResponse({
         "projects": [to_json(project) for project in Project.objects.all()]
     })
+
 
 @require_http_methods(["PUT", "DELETE"])
 @csrf_exempt
@@ -79,6 +83,7 @@ def join_project(request: HttpRequest, uuid: UUID):
         project.users.remove(request.user)
 
     return JsonResponse({"message": "OK"}, status=200)
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -109,8 +114,10 @@ def create_division(request: HttpRequest, uuid: UUID):
     div = ProjectDivision.objects.create(project=project, priority=1, content=image_bin)
     return JsonResponse({"message": "Successfully created division", "uuid": div.uuid})
 
+
 def split_rgb(rgb):
     return rgb >> 16, rgb >> 8 & 0xFF, rgb & 0xFF, 0xFF  # alpha 255
+
 
 @require_safe
 def get_bitmap(request: HttpRequest):
@@ -121,8 +128,8 @@ def get_bitmap(request: HttpRequest):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
 
-        for y in range(0, min(height, canvas.height-oy)):
-            for x in range(0, min(width, canvas.width-ox)):
+        for y in range(0, min(height, canvas.height - oy)):
+            for x in range(0, min(width, canvas.width - ox)):
                 index = (width * y) + x
                 colour_index = div.get_image_bytes()[index]
                 if colour_index == 0xFF:
@@ -139,6 +146,7 @@ def get_bitmap(request: HttpRequest):
         "Content-Type": "image/png",
     })
 
+
 @require_safe
 def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     try:
@@ -152,7 +160,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
         return HttpResponse(b"Project has no image data", status=400)
 
     projectX, projectY, width, height = projectDimensions
-    
+
     canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
     for div in project.projectdivision_set.all():
