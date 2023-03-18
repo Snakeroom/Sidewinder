@@ -47,9 +47,23 @@ class CanvasSettings(SingletonModel):
         verbose_name = "Canvas Settings"
 
 
+class ProjectRole(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey('Project', on_delete=models.CASCADE)
+    role = models.CharField(max_length=7, choices=[('owner', 'Owner'), ('manager', 'Manager'), ('user', 'User')],
+                            default='user')
+
+    def __str__(self):
+        return f"{self.project} - {self.user} - {self.role}"
+
+    class Meta:
+        unique_together = ['user', 'project']
+
+
 class Project(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=256)
+    users = models.ManyToManyField(User, related_name='place_projects', through=ProjectRole, blank=True)
     high_priority = models.BooleanField(
         verbose_name='Featured Project',
         help_text='Gives the project special priority - shown to unauthenticated users, '
@@ -68,34 +82,20 @@ class Project(models.Model):
         return self.name
 
     def get_user_count(self):
-        return ProjectRole.objects.filter(project=self).count()
+        return self.users.count()
 
     def user_is_member(self, user):
-        try:
-            ProjectRole.objects.get(user=user, project=self)
-            return True
-        except ProjectRole.DoesNotExist:
-            return False
+        return self.users.contains(user)
 
     def user_is_manager(self, user):
         if user.is_staff:
             return True
-        elif self.user_is_member(user):
-            try:
-                ProjectRole.objects.filter(user=user, project=self).get(Q(role='owner') | Q(role='manager'))
-                return True
-            except ProjectRole.DoesNotExist:
-                return False
 
-
-class ProjectRole(models.Model):
-    def __str__(self):
-        return f"{self.project} - {self.user} - {self.role}"
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    role = models.CharField(max_length=7, choices=[('owner', 'Owner'), ('manager', 'Manager'), ('user', 'User')],
-                            default='user')
+        try:
+            role = ProjectRole.objects.get(user=user, project=self)
+            return role.role in ('manager', 'owner')
+        except ProjectRole.DoesNotExist:
+            return False
 
 
 def default_division_bytes():
@@ -105,7 +105,7 @@ def default_division_bytes():
 
 class ProjectDivision(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    division_name = models.CharField(max_length=256)
+    division_name = models.CharField(max_length=256, default="Default")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     priority = models.IntegerField(help_text="A higher number receives priority")
     enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them",
@@ -115,7 +115,7 @@ class ProjectDivision(models.Model):
     # content is big-endian 4 shorts header followed by bytearray of data
 
     def __str__(self):
-        return f"{self.project.name} - {self.uuid}"
+        return f"{self.project.name} - {self.division_name}"
 
     def unpack_header(self):
         return struct.unpack(">HHHH", self.content[:8])

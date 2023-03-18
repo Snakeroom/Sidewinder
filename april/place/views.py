@@ -27,16 +27,14 @@ def manage_project(request: HttpRequest, uuid):
                 result['joined'] = current_project.user_is_member(request.user)
                 if current_project.user_is_manager(request.user):
                     result['can_edit'] = True
-                    members = [{"uid": member.user.uid, "username": member.user.username, "role": member.role}
-                               for member in project_permissions]
+                    result['members'] = [{"uid": member.user.uid, "username": member.user.username, "role": member.role}
+                                         for member in project_permissions]
 
-                    result['members'] = members
-
-                    divisions = [{'uuid': division.uuid, 'name': division.division_name, 'priority': division.priority,
-                                  'enabled': division.enabled, 'dimensions': division.get_dimensions(),
-                                  'origin': division.get_origin()} for division in
-                                 current_project.projectdivision_set.all()]
-                    result['divisions'] = divisions
+                    result['divisions'] = [
+                        {'uuid': division.uuid, 'name': division.division_name, 'priority': division.priority,
+                         'enabled': division.enabled, 'dimensions': division.get_dimensions(),
+                         'origin': division.get_origin()} for division in
+                        current_project.projectdivision_set.all()]
                 else:
                     result['members'] = current_project.get_user_count()
             elif current_project.show_user_count:
@@ -44,8 +42,7 @@ def manage_project(request: HttpRequest, uuid):
             return result
 
         project = Project.objects.get(pk=uuid)
-        json_response = to_json(project)
-        return JsonResponse(json_response, status=200)
+        return JsonResponse(to_json(project), status=200)
 
 
 def get_project_dimensions(project: Project):
@@ -189,19 +186,19 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     except Project.DoesNotExist:
         return HttpResponse(b"Project with that UUID does not exist", status=400)
 
-    projectDimensions = get_project_dimensions(project)
+    project_dimensions = get_project_dimensions(project)
 
-    if projectDimensions is None:
+    if project_dimensions is None:
         return HttpResponse(b"Project has no image data", status=400)
 
-    projectX, projectY, width, height = projectDimensions
+    project_x, project_y, width, height = project_dimensions
 
     canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
     for div in project.projectdivision_set.all():
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
-        mx, my = ox - projectX, oy - projectY
+        mx, my = ox - project_x, oy - project_y
 
         for y in range(0, height):
             for x in range(0, width):
