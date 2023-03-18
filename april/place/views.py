@@ -8,7 +8,42 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
-from .models import Project, ProjectDivision, PALETTE, CanvasSettings
+from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRole
+
+
+@require_http_methods(['GET'])
+def manage_project(request: HttpRequest, uuid):
+
+    if request.method == "GET":
+
+        def to_json(current_project):
+            project_permissions = ProjectRole.objects.filter(project=project)
+
+            result = dict(uuid=current_project.uuid,
+                          name=current_project.name,
+                          featured=current_project.high_priority,
+                          can_edit=False)
+            if request.user.is_authenticated:
+                result['joined'] = current_project.user_is_member(request.user)
+                if current_project.user_is_manager(request.user):
+                    result['can_edit'] = True
+                    result['members'] = [{"uid": member.user.uid, "username": member.user.username, "role": member.role}
+                                         for member in project_permissions]
+
+                    result['divisions'] = [
+                        {'uuid': division.uuid, 'name': division.division_name, 'priority': division.priority,
+                         'enabled': division.enabled, 'dimensions': division.get_dimensions(),
+                         'origin': division.get_origin()} for division in
+                        current_project.projectdivision_set.all()]
+                else:
+                    result['members'] = current_project.get_user_count()
+            elif current_project.show_user_count:
+                result['members'] = current_project.get_user_count()
+            return result
+
+        project = Project.objects.get(pk=uuid)
+        return JsonResponse(to_json(project), status=200)
+
 
 def get_project_dimensions(project: Project):
     settings = CanvasSettings.get_solo()
@@ -36,10 +71,10 @@ def get_projects(request: HttpRequest):
         result = dict(uuid=project.uuid, name=project.name)
 
         if project.show_user_count:
-            result['members'] = project.users.count()
+            result['members'] = project.get_user_count()
 
         if request.user.is_authenticated:
-            result['joined'] = project.users.contains(request.user)
+            result['joined'] = project.user_is_member(request.user)
 
         project_dimensions = get_project_dimensions(project)
 
@@ -47,14 +82,15 @@ def get_projects(request: HttpRequest):
             project_x, project_y, _, _ = project_dimensions
             result['x'] = project_x
             result['y'] = project_y
-            
+
         result['featured'] = project.high_priority
-        
+
         return result
 
     return JsonResponse({
         "projects": [to_json(project) for project in Project.objects.all()]
     })
+
 
 @require_http_methods(["PUT", "DELETE"])
 @csrf_exempt
@@ -68,17 +104,18 @@ def join_project(request: HttpRequest, uuid: UUID):
         return JsonResponse({"error": "Project with that UUID doesn't exist!"}, status=400)
 
     if request.method == "PUT":
-        if project.users.contains(request.user):
+        if project.user_is_member(request.user):
             return JsonResponse({"error": "Already in project"}, status=400)
 
-        project.users.add(request.user)
+        ProjectRole(user=request.user, project=project, role='user').save()
     else:
-        if not project.users.contains(request.user):
+        if not project.user_is_member(request.user):
             return JsonResponse({"error": "Not in project"}, status=400)
 
-        project.users.remove(request.user)
+        ProjectRole.objects.filter(user=request.user, project=project).delete()
 
     return JsonResponse({"message": "OK"}, status=200)
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -109,8 +146,10 @@ def create_division(request: HttpRequest, uuid: UUID):
     div = ProjectDivision.objects.create(project=project, priority=1, content=image_bin)
     return JsonResponse({"message": "Successfully created division", "uuid": div.uuid})
 
+
 def split_rgb(rgb):
     return rgb >> 16, rgb >> 8 & 0xFF, rgb & 0xFF, 0xFF  # alpha 255
+
 
 @require_safe
 def get_bitmap(request: HttpRequest):
@@ -121,8 +160,8 @@ def get_bitmap(request: HttpRequest):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
 
-        for y in range(0, min(height, canvas.height-oy)):
-            for x in range(0, min(width, canvas.width-ox)):
+        for y in range(0, min(height, canvas.height - oy)):
+            for x in range(0, min(width, canvas.width - ox)):
                 index = (width * y) + x
                 colour_index = div.get_image_bytes()[index]
                 if colour_index == 0xFF:
@@ -139,6 +178,7 @@ def get_bitmap(request: HttpRequest):
         "Content-Type": "image/png",
     })
 
+
 @require_safe
 def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     try:
@@ -146,19 +186,19 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     except Project.DoesNotExist:
         return HttpResponse(b"Project with that UUID does not exist", status=400)
 
-    projectDimensions = get_project_dimensions(project)
+    project_dimensions = get_project_dimensions(project)
 
-    if projectDimensions is None:
+    if project_dimensions is None:
         return HttpResponse(b"Project has no image data", status=400)
 
-    projectX, projectY, width, height = projectDimensions
-    
+    project_x, project_y, width, height = project_dimensions
+
     canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
     for div in project.projectdivision_set.all():
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
-        mx, my = ox - projectX, oy - projectY
+        mx, my = ox - project_x, oy - project_y
 
         for y in range(0, height):
             for x in range(0, width):
