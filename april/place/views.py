@@ -48,6 +48,7 @@ def get_projects(request: HttpRequest):
             project_x, project_y, _, _ = project_dimensions
             result['x'] = project_x
             result['y'] = project_y
+            result['has_image'] = True
         else:
             result['has_image'] = False
 
