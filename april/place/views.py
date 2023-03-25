@@ -23,8 +23,16 @@ def manage_project(request: HttpRequest, uuid):
                           name=current_project.name,
                           featured=current_project.high_priority,
                           can_edit=False)
+
+            project_dimensions = get_project_dimensions(project)
+            if project_dimensions:
+                _, _, project_width, project_height = project_dimensions
+                result['width'] = project_width
+                result['height'] = project_height
+
             if request.user.is_authenticated:
                 result['joined'] = current_project.user_is_member(request.user)
+
                 if current_project.user_is_manager(request.user):
                     result['can_edit'] = True
                     result['members'] = [{"uid": member.user.uid, "username": member.user.username, "role": member.role}
@@ -79,10 +87,11 @@ def get_projects(request: HttpRequest):
         project_dimensions = get_project_dimensions(project)
 
         if project_dimensions:
-            project_x, project_y, _, _ = project_dimensions
+            project_x, project_y, project_width, project_height = project_dimensions
             result['x'] = project_x
             result['y'] = project_y
-
+            result['width'] = project_width
+            result['height'] = project_height
         result['featured'] = project.high_priority
 
         return result
