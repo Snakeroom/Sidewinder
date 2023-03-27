@@ -13,4 +13,7 @@ pip install -r requirements.txt
 
 # Set this environ.
 export DJANGO_SETTINGS_MODULE=config.development
+
+# Start development web server
+python manage.py runserver
 ```
