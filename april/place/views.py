@@ -190,27 +190,37 @@ def get_divisions(request: HttpRequest, uuid: UUID):
 @has_valid_token_or_user
 @require_http_methods(['GET', 'POST', 'DELETE'])
 def manage_division(request, project_uuid: UUID, division_uuid: UUID):
-    project = Project.objects.get(pk=project_uuid)
     if hasattr(request, 'snek_token'):
         user = request.snek_token.owner
     else:
         user = request.user
 
-    if project.user_is_manager(user):
-        division = ProjectDivision.objects.get(pk=division_uuid, project__uuid=project_uuid)
-        if request.method == 'GET':
-            result = dict(uuid=division.uuid,
-                          name=division.division_name,
-                          priority=division.priority,
-                          enabled=division.enabled,
-                          dimensions=division.get_dimensions(),
-                          origin=division.get_origin())
-            return JsonResponse(result)
+    try:
+        project = Project.objects.get(pk=project_uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Bad Response'}, status=400)
 
-        elif request.method == 'POST':
-            division_name = request.POST.get('name', division.division_name)
-            priority = request.POST.get('priority', division.priority)
-            enabled = request.POST.get('enabled', division.enabled)
+    if not project.user_is_manager(user):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        division = ProjectDivision.objects.get(pk=division_uuid, project__uuid=project_uuid)
+    except ProjectDivision.DoesNotExist:
+        return JsonResponse({'error': 'Bad Response'}, status=400)
+
+    if request.method == 'GET':
+        result = dict(uuid=division.uuid,
+                      name=division.division_name,
+                      priority=division.priority,
+                      enabled=division.enabled,
+                      dimensions=division.get_dimensions(),
+                      origin=division.get_origin())
+        return JsonResponse(result)
+
+    elif request.method == 'POST':
+        division_name = request.POST.get('name', division.division_name)
+        priority = request.POST.get('priority', division.priority)
+        enabled = request.POST.get('enabled', division.enabled)
 
             try:
                 division.division_name = division_name
@@ -225,8 +235,6 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
             division.delete()
             return HttpResponse(status=200)
 
-    else:
-        return JsonResponse({'error': 'Forbidden'}, status=403)
 
 
 @require_safe
