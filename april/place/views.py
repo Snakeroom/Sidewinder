@@ -12,6 +12,7 @@ from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRo
 
 
 @require_http_methods(['GET'])
+@csrf_exempt
 def manage_project(request: HttpRequest, uuid):
 
     if request.method == "GET":
