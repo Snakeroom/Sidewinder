@@ -222,18 +222,18 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
         priority = request.POST.get('priority', division.priority)
         enabled = request.POST.get('enabled', division.enabled)
 
-            try:
-                division.division_name = division_name
-                division.priority = priority
-                division.enabled = enabled
-                division.save()
-                return HttpResponse(status=200)
-            except ValueError:
-                return JsonResponse({'error': 'Bad Request'}, status=400)
+        try:
+            division.division_name = division_name
+            division.priority = priority
+            division.enabled = enabled
+            division.save()
+            return HttpResponse(status=204)
+        except ValueError:
+            return JsonResponse({'error': 'Bad Request'}, status=400)
 
-        elif request.method == 'DELETE':
-            division.delete()
-            return HttpResponse(status=200)
+    elif request.method == 'DELETE':
+        division.delete()
+        return HttpResponse(status=204)
 
 
 
