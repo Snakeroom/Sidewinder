@@ -12,6 +12,7 @@ from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRo
 
 
 @require_http_methods(['GET'])
+@csrf_exempt
 def manage_project(request: HttpRequest, uuid):
 
     if request.method == "GET":
@@ -158,6 +159,82 @@ def create_division(request: HttpRequest, uuid: UUID):
 
 def split_rgb(rgb):
     return rgb >> 16, rgb >> 8 & 0xFF, rgb & 0xFF, 0xFF  # alpha 255
+
+
+@csrf_exempt
+@has_valid_token_or_user
+@require_http_methods(['GET'])
+def get_divisions(request: HttpRequest, uuid: UUID):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+
+    try:
+        project = Project.objects.get(uuid=uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Not Found'}, status=404)
+
+    if project.user_is_manager(user):
+        divisions = [
+            {'uuid': division.uuid, 'name': division.division_name, 'priority': division.priority,
+             'enabled': division.enabled, 'dimensions': division.get_dimensions(),
+             'origin': division.get_origin()} for division in
+            project.projectdivision_set.all()]
+        return JsonResponse(divisions, safe=False)
+    else:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+
+@csrf_exempt
+@has_valid_token_or_user
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def manage_division(request, project_uuid: UUID, division_uuid: UUID):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+
+    try:
+        project = Project.objects.get(pk=project_uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found'}, status=400)
+
+    if not project.user_is_manager(user):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        division = ProjectDivision.objects.get(pk=division_uuid, project__uuid=project_uuid)
+    except ProjectDivision.DoesNotExist:
+        return JsonResponse({'error': 'Division not found'}, status=400)
+
+    if request.method == 'GET':
+        result = dict(uuid=division.uuid,
+                      name=division.division_name,
+                      priority=division.priority,
+                      enabled=division.enabled,
+                      dimensions=division.get_dimensions(),
+                      origin=division.get_origin())
+        return JsonResponse(result)
+
+    elif request.method == 'POST':
+        division_name = request.POST.get('name', division.division_name)
+        priority = request.POST.get('priority', division.priority)
+        enabled = request.POST.get('enabled', division.enabled)
+
+        try:
+            division.division_name = division_name
+            division.priority = priority
+            division.enabled = enabled
+            division.save()
+            return HttpResponse(status=204)
+        except ValueError:
+            return JsonResponse({'error': 'Bad Request'}, status=400)
+
+    elif request.method == 'DELETE':
+        division.delete()
+        return HttpResponse(status=204)
+
 
 
 @require_safe
