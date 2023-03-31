@@ -198,7 +198,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
     try:
         project = Project.objects.get(pk=project_uuid)
     except Project.DoesNotExist:
-        return JsonResponse({'error': 'Bad Response'}, status=400)
+        return JsonResponse({'error': 'Project not found'}, status=400)
 
     if not project.user_is_manager(user):
         return JsonResponse({'error': 'Forbidden'}, status=403)
@@ -206,7 +206,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
     try:
         division = ProjectDivision.objects.get(pk=division_uuid, project__uuid=project_uuid)
     except ProjectDivision.DoesNotExist:
-        return JsonResponse({'error': 'Bad Response'}, status=400)
+        return JsonResponse({'error': 'Division not found'}, status=400)
 
     if request.method == 'GET':
         result = dict(uuid=division.uuid,
