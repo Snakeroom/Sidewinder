@@ -9,7 +9,7 @@ def _check_authorized(request: HttpRequest, view_func, kwargs):
         if not request.user.is_active:
             return JsonResponse({"error": "Account deactivated."}, status=403)
 
-        return view_func(request)
+        return view_func(request, **kwargs)
 
     if 'authorization' in request.headers:
         token = request.headers['authorization']
@@ -20,7 +20,6 @@ def _check_authorized(request: HttpRequest, view_func, kwargs):
 
     try:
         perm = Token.objects.get(token=token)
-
         if not perm.active:
             return JsonResponse({"error": "Token deactivated"}, status=403)
 
@@ -33,11 +32,13 @@ def _check_authorized(request: HttpRequest, view_func, kwargs):
     request.snek_token = perm
     return view_func(request, **kwargs)
 
+
 def has_valid_token_or_user(view_func):
     def wrapper(request: HttpRequest, **kwargs):
         return _check_authorized(request, view_func, kwargs)
 
     return wrapper
+
 
 def check_can_query(view_func):
     def wrapper(request: HttpRequest):
