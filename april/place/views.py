@@ -48,9 +48,11 @@ def manage_project(request: HttpRequest, uuid):
             elif current_project.show_user_count:
                 result['members'] = current_project.get_user_count()
             return result
-
-        project = Project.objects.get(pk=uuid)
-        return JsonResponse(to_json(project), status=200)
+        try:
+            project = Project.objects.get(pk=uuid)
+            return JsonResponse(to_json(project), status=200)
+        except Project.DoesNotExist:
+            return JsonResponse({'error': 'Project not Found'}, status=404)
 
 
 def get_project_dimensions(project: Project):
