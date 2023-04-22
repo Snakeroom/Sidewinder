@@ -31,6 +31,8 @@ class User(AbstractBaseUser, PermissionsMixin, UserMixin):
     email = models.EmailField(verbose_name='email address', blank=True)
     pronouns = models.CharField(max_length=300, default='unspecified')
 
+    discord_id = models.CharField(max_length=20, verbose_name="Discord ID", blank=True)
+
     USERNAME_FIELD = 'username'
     EMAIL_FIELD = 'email'
     REQUIRED_FIELDS = ['uid', 'email']
@@ -50,12 +52,26 @@ class RedditApplication(SingletonModel):
         verbose_name = 'Reddit Application'
         verbose_name_plural = 'Reddit Applications'
 
-class RedditCredentials(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
+class DiscordApplication(SingletonModel):
+    name = models.CharField(max_length=128)
 
+    client_id = models.CharField(max_length=20)
+    client_secret = models.CharField(max_length=32)
+
+    class Meta:
+        verbose_name = 'Discord Application'
+        verbose_name_plural = 'Discord Applications'
+
+class Credentials(models.Model):
     access_token = models.CharField(max_length=200)
     refresh_token = models.CharField(max_length=200)
     last_refresh = models.DateTimeField()
+
+    class Meta:
+        abstract = True
+
+class RedditCredentials(Credentials):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reddit_tokens')
 
     def __str__(self):
         return f"{self.user.username} - Reddit"
@@ -63,3 +79,13 @@ class RedditCredentials(models.Model):
     class Meta:
         verbose_name = 'Reddit Credentials'
         verbose_name_plural = 'Reddit Credentials'
+
+class DiscordCredentials(Credentials):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discord_tokens')
+
+    def __str__(self):
+        return f"{self.user.username} - Discord"
+
+    class Meta:
+        verbose_name = 'Discord Credentials'
+        verbose_name_plural = 'Discord Credentials'

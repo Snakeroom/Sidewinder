@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserChangeForm, AdminPasswordChangeForm
 from django.urls import path
 from solo.admin import SingletonModelAdmin
 
-from sidewinder.identity.models import User, RedditCredentials, RedditApplication
+from sidewinder.identity.models import User, RedditCredentials, DiscordCredentials, RedditApplication, DiscordApplication
 
 
 class IdentityUserChangeForm(UserChangeForm):
@@ -17,16 +17,19 @@ class UserAdmin(admin.ModelAdmin):
     form = IdentityUserChangeForm
     list_display = ('username', 'uid', 'pronouns',)
     list_filter = ('is_staff', 'is_active',)
-    readonly_fields = ('uid',)
+    readonly_fields = ('uid', 'discord_id',)
     change_password_form = AdminPasswordChangeForm
     change_user_password_template = None
 
     fieldsets = (
         ('User details', {
-            "fields": ('username', 'uid', 'password', 'date_joined',)
+            "fields": ('username', 'password', 'date_joined',)
         }),
         ('Profile', {
             "fields": ('email', 'pronouns',)
+        }),
+        ('Connections', {
+            "fields": ('uid', 'discord_id',)
         }),
         ('Permissions', {
             "fields": ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions',)
@@ -44,10 +47,10 @@ class UserAdmin(admin.ModelAdmin):
         # Don't allow lookups involving passwords.
         return not lookup.startswith('password') and super().lookup_allowed(lookup, value)
 
-@admin.register(RedditApplication)
-class RedditAppAdmin(SingletonModelAdmin):
+@admin.register(RedditApplication, DiscordApplication)
+class RedditDiscordAppAdmin(SingletonModelAdmin):
     list_display = ('name',)
 
-@admin.register(RedditCredentials)
-class RedditCredentialsAdmin(admin.ModelAdmin):
+@admin.register(RedditCredentials, DiscordCredentials)
+class CredentialsAdmin(admin.ModelAdmin):
     list_display = ('user', 'last_refresh',)
