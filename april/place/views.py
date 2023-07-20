@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
-from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRole
+from .models import Project, ProjectDivision, CanvasSettings, ProjectRole
 
 
 @require_http_methods(['GET'])
@@ -228,8 +228,8 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
 
 
 def blit(source, dest=np.array((1000, 1000)), origin=(0, 0)) -> np.ndarray:
-    neg = [-i if i < 0 else 0 for i in origin]
-    pos = [i if i > 0 else 0 for i in origin]
+    neg = [-i if i < 0 else 0 for i in origin[::-1]]
+    pos = [i if i > 0 else 0 for i in origin[::-1]]
     source_size = np.subtract(dest.shape[0:2], pos)
     source_slice = [slice(neg[i], source_size[i]) for i in (0, 1)]
     source_resized = source[*source_slice]
