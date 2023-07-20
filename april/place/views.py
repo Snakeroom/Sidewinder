@@ -52,7 +52,7 @@ def manage_project(request: HttpRequest, uuid):
 
         try:
             project = Project.objects.get(pk=uuid)
-            return JsonResponse({'project': to_json(project)}, status=200)  # TODO Wrap in object like every other response
+            return JsonResponse({'project': to_json(project)}, status=200)
         except Project.DoesNotExist:
             return JsonResponse({'error': 'Project not Found'}, status=404)
 
@@ -272,7 +272,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     for div in project.projectdivision_set.all():
         if hasattr(div, 'image'):
             empty = np.empty_like(canvas)
-            bitmap = np.asarray(Image.open(div.image.image))
+            bitmap = np.asarray(Image.open(div.image.image).convert('RGBA'))
             bitmap_resized = blit(bitmap, empty, div.get_origin())
             mask_array = bitmap_resized[:, :, 3] != 0
             np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
