@@ -1,8 +1,8 @@
 import struct
 import uuid
 
-import imageio
 import numpy as np
+from PIL import Image
 from django.contrib import admin
 from django.db import models
 from django.db.models import Q
@@ -143,20 +143,23 @@ class ProjectDivision(models.Model):
         :return: Image numpy.ndarray
         """
         if hasattr(self, 'image'):
-            image = imageio.v3.imread(self.image.image.path)
+            image = np.asarray(Image.open(self.image.image.path))
             return image
         else:
             return None
 
     @admin.display(description='Pixel Count')
-    def get_pixel_count(self) -> int:
+    def get_pixel_count(self):
         """
         Get a count of pixels in this division
         :return: Count int
         """
-        img = self.get_image()
-        return np.count_nonzero(
-            img[:, :, 3] != 0)  # TODO Determine if pixels should be counted with full or any opacity
+        if hasattr(self, 'image'):
+            img = self.get_image()
+            return np.count_nonzero(
+                img[:, :, 3] != 0)  # TODO Determine if pixels should be counted with full or any opacity
+        else:
+            return None
 
 
 def image_path(self, _) -> str:
