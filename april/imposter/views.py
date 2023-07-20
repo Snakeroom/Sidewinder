@@ -53,7 +53,7 @@ def submit_known_answers(request: HttpRequest):
 
     return JsonResponse({
         "seen": seen,
-    })
+    }, status=200)
 
 @csrf_exempt
 @check_can_query
@@ -88,7 +88,7 @@ def query_answers(request: HttpRequest):
     if should_lie and len(human_answers) == 5:
         answers = answers[:-2]
 
-    return JsonResponse({"answers": answers})
+    return JsonResponse({"answers": answers}, status=200)
 
 @require_http_methods(["GET", "HEAD"])
 def fetch_recent(request: HttpRequest):
@@ -107,7 +107,7 @@ def fetch_recent(request: HttpRequest):
             "modified": answer.updated_at,
         })
 
-    return JsonResponse({"recent": res})
+    return JsonResponse({"recent": res}, status=200)
 
 @require_http_methods(["GET", "HEAD"])
 def check_answer(request: HttpRequest):

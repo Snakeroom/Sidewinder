@@ -52,7 +52,7 @@ def manage_project(request: HttpRequest, uuid):
 
         try:
             project = Project.objects.get(pk=uuid)
-            return JsonResponse(to_json(project), status=200)
+            return JsonResponse({'project': to_json(project)}, status=200)  # TODO Wrap in object like every other response
         except Project.DoesNotExist:
             return JsonResponse({'error': 'Project not Found'}, status=404)
 
@@ -105,7 +105,7 @@ def get_projects(request: HttpRequest):
 
     return JsonResponse({
         "projects": [to_json(project) for project in Project.objects.all()]
-    })
+    }, status=200)
 
 
 @require_http_methods(["PUT", "DELETE"])
@@ -172,7 +172,7 @@ def get_divisions(request: HttpRequest, uuid: UUID):
              'enabled': division.enabled, 'dimensions': division.get_dimensions(),
              'origin': division.get_origin()} for division in
             project.projectdivision_set.all()]
-        return JsonResponse(divisions, safe=False)
+        return JsonResponse({'divisions': divisions}, safe=False)
     else:
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
@@ -206,7 +206,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
                       enabled=division.enabled,
                       dimensions=division.get_dimensions(),
                       origin=division.get_origin())
-        return JsonResponse(result)
+        return JsonResponse({'division': result}, status=200)
 
     elif request.method == 'POST':
         division_name = request.POST.get('name', division.division_name)
@@ -288,6 +288,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
         "Content-Type": "image/png",
     })
 
+
 @has_valid_token_or_user
 def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_uuid: UUID):
     if hasattr(request, 'snek_token'):
@@ -313,7 +314,7 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
                     "Content-Type": "image/png",
                 })
             else:
-                return JsonResponse({'error': 'No division bitmap'})
+                return JsonResponse({'error': 'No division bitmap'}, status=404)
         except ProjectDivision.DoesNotExist:
             return JsonResponse({'error': 'Division not found'}, status=400)
     else:

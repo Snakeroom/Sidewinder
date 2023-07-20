@@ -87,7 +87,7 @@ def get_current_user(request):
             "username": user.username,
             "pronouns": user.pronouns,
             "is_staff": user.is_staff,
-        })
+        }, status=200)
     else:
         return JsonResponse({
             "error": "Not signed in"

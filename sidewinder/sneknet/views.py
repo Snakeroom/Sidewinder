@@ -27,7 +27,7 @@ def get_owned_tokens(request: HttpRequest):
 
     return JsonResponse({
         "tokens": tokens,
-    })
+    }, status=200)
 
 def get_user_scripts(request: HttpRequest):
     if not request.user.is_authenticated:
@@ -46,4 +46,4 @@ def get_user_scripts(request: HttpRequest):
 
     return JsonResponse({
         "scripts": scripts,
-    })
+    }, status=200)

@@ -117,6 +117,7 @@ class ProjectDivision(models.Model):
     def __str__(self):
         return f"{self.project.name} - {self.division_name}"
 
+    @admin.display(description="Origin")
     def get_origin(self) -> (int, int):
         """
         Get the origin of this layer
