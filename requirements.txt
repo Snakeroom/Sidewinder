@@ -3,7 +3,9 @@ django-solo==2.0.0
 django-cors-headers==3.11.0
 django-environ==0.8.1
 channels==3.0.4
+django-image-uploader-widget==0.2.5
 
 praw==7.5.0
 
 Pillow==9.0.1
+

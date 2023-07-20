@@ -2,6 +2,7 @@ import struct
 from io import BytesIO
 from uuid import UUID
 
+import numpy as np
 from PIL import Image
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,7 +15,6 @@ from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRo
 @require_http_methods(['GET'])
 @csrf_exempt
 def manage_project(request: HttpRequest, uuid):
-
     if request.method == "GET":
 
         def to_json(current_project):
@@ -49,6 +49,7 @@ def manage_project(request: HttpRequest, uuid):
             elif current_project.show_user_count:
                 result['members'] = current_project.get_user_count()
             return result
+
         try:
             project = Project.objects.get(pk=uuid)
             return JsonResponse(to_json(project), status=200)
@@ -63,17 +64,20 @@ def get_project_dimensions(project: Project):
 
     for division in project.projectdivision_set.all():
         x, y = division.get_origin()
-        min_x = min(min_x, x)
-        min_y = min(min_y, y)
-
         width, height = division.get_dimensions()
-        max_x = max(max_x, x + width)
-        max_y = max(max_y, y + height)
+        if None in (x, y, width, height):
+            return None
+        else:
+            min_x = min(min_x, x)
+            min_y = min(min_y, y)
 
-    if min_x > max_x or min_y > max_y:
-        return None
-    else:
-        return min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+            max_x = max(max_x, x + width)
+            max_y = max(max_y, y + height)
+            if min_x > max_x or min_y > max_y:
+                return None
+            else:
+                return min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+    # TODO Simplify this?
 
 
 @require_safe
@@ -144,23 +148,8 @@ def create_division(request: HttpRequest, uuid: UUID):
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
 
-    image_bin = request.body
-
-    # Validate
-    try:
-        x, y, width, height = struct.unpack(">HHHH", image_bin[:8])
-
-        if len(image_bin) != (width * height) + 8:
-            return JsonResponse({"error": "Snek image has invalid dimensions or is truncated"}, status=400)
-    except struct.error as err:
-        return JsonResponse({"error": "Invalid snek image", "message": err.args[0]}, status=400)
-
-    div = ProjectDivision.objects.create(project=project, priority=1, content=image_bin)
+    div = ProjectDivision.objects.create(project=project, priority=1)
     return JsonResponse({"message": "Successfully created division", "uuid": div.uuid})
-
-
-def split_rgb(rgb):
-    return rgb >> 16, rgb >> 8 & 0xFF, rgb & 0xFF, 0xFF  # alpha 255
 
 
 @csrf_exempt
@@ -200,7 +189,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
     try:
         project = Project.objects.get(pk=project_uuid)
     except Project.DoesNotExist:
-        return JsonResponse({'error': 'Project not found'}, status=400)
+        return JsonResponse({'error': 'Project with that UUID does not exist'}, status=404)
 
     if not project.user_is_manager(user):
         return JsonResponse({'error': 'Forbidden'}, status=403)
@@ -238,28 +227,32 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
         return HttpResponse(status=204)
 
 
+def blit(source, dest=np.array((1000, 1000)), origin=(0, 0)) -> np.ndarray:
+    neg = [-i if i < 0 else 0 for i in origin]
+    pos = [i if i > 0 else 0 for i in origin]
+    source_size = np.subtract(dest.shape[0:2], pos)
+    source_slice = [slice(neg[i], source_size[i]) for i in (0, 1)]
+    source_resized = source[*source_slice]
+    dest[pos[0]:pos[0] + source_resized.shape[0], pos[1]:pos[1] + source_resized.shape[1]] = source_resized
+    return dest
+
 
 @require_safe
 def get_bitmap(request: HttpRequest):
     settings = CanvasSettings.get_solo()
-    canvas = Image.new('RGBA', (settings.canvas_width, settings.canvas_height), (255, 255, 255, 0))
+    canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
 
-    for div in ProjectDivision.objects.all():
-        ox, oy = div.get_origin()
-        width, height = div.get_dimensions()
+    for div in ProjectDivision.objects.filter(project__approved=True):
+        if hasattr(div, 'image'):
+            empty = np.empty_like(canvas)
+            bitmap = np.asarray(Image.open(div.image.image))
+            bitmap_resized = blit(bitmap, empty, div.get_origin())
+            mask_array = bitmap_resized[:, :, 3] != 0
+            np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
 
-        for y in range(0, min(height, canvas.height - oy)):
-            for x in range(0, min(width, canvas.width - ox)):
-                index = (width * y) + x
-                colour_index = div.get_image_bytes()[index]
-                if colour_index == 0xFF:
-                    continue
-
-                rgb = PALETTE[colour_index]
-                canvas.putpixel((ox + x, oy + y), split_rgb(rgb))
-
+    bitmap = Image.fromarray(canvas.astype(np.uint8), 'RGBA')
     io = BytesIO()
-    canvas.save(io, "png")
+    bitmap.save(io, "png")
 
     io.seek(0)
     return FileResponse(io, filename="bitmap.png", headers={
@@ -272,34 +265,21 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
-        return HttpResponse(b"Project with that UUID does not exist", status=400)
+        return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
 
-    project_dimensions = get_project_dimensions(project)
-
-    if project_dimensions is None:
-        return HttpResponse(b"Project has no image data", status=400)
-
-    project_x, project_y, width, height = project_dimensions
-
-    canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
-
+    settings = CanvasSettings.get_solo()
+    canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
     for div in project.projectdivision_set.all():
-        ox, oy = div.get_origin()
-        width, height = div.get_dimensions()
-        mx, my = ox - project_x, oy - project_y
+        if hasattr(div, 'image'):
+            empty = np.empty_like(canvas)
+            bitmap = np.asarray(Image.open(div.image.image))
+            bitmap_resized = blit(bitmap, empty, div.get_origin())
+            mask_array = bitmap_resized[:, :, 3] != 0
+            np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
 
-        for y in range(0, height):
-            for x in range(0, width):
-                index = (width * y) + x
-                colour_index = div.get_image_bytes()[index]
-                if colour_index == 0xFF:
-                    continue
-
-                rgb = PALETTE[colour_index]
-                canvas.putpixel((mx + x, my + y), split_rgb(rgb))
-
+    project_bitmap = Image.fromarray(canvas.astype(np.uint8), mode='RGBA')
     io = BytesIO()
-    canvas.save(io, "png")
+    project_bitmap.save(io, "png")
 
     io.seek(0)
     return FileResponse(io, filename="bitmap.png", headers={
