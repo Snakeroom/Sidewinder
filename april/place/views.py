@@ -245,7 +245,7 @@ def get_bitmap(request: HttpRequest):
     for div in ProjectDivision.objects.filter(project__approved=True):
         if hasattr(div, 'image'):
             empty = np.empty_like(canvas)
-            bitmap = np.asarray(Image.open(div.image.image))
+            bitmap = np.asarray(Image.open(div.image.image).convert('RGBA'))
             bitmap_resized = blit(bitmap, empty, div.get_origin())
             mask_array = bitmap_resized[:, :, 3] != 0
             np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
@@ -303,7 +303,7 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
             division = ProjectDivision.objects.get(uuid=division_uuid)
 
             if hasattr(division, 'image'):
-                division_bitmap = Image.open(division.image.image)
+                division_bitmap = Image.open(division.image.image).convert('RGBA')
                 io = BytesIO()
                 division_bitmap.save(io, "png")
                 io.seek(0)

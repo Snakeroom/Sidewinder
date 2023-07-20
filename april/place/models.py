@@ -1,11 +1,9 @@
-import struct
 import uuid
 
 import numpy as np
 from PIL import Image
 from django.contrib import admin
 from django.db import models
-from django.db.models import Q
 from solo.models import SingletonModel
 
 from sidewinder.identity.models import User
@@ -113,8 +111,8 @@ class ProjectDivision(models.Model):
                                   default=True)
     height = models.PositiveIntegerField(null=True, blank=True, editable=False)
     width = models.PositiveIntegerField(null=True, blank=True, editable=False)
-    origin_x = models.IntegerField(null=True, blank=True, verbose_name='Origin X')
-    origin_y = models.IntegerField(null=True, blank=True, verbose_name='Origin Y')
+    origin_x = models.IntegerField(default=0, verbose_name='Origin X')
+    origin_y = models.IntegerField(default=0, verbose_name='Origin Y')
 
     def __str__(self):
         return f"{self.project.name} - {self.division_name}"
@@ -143,7 +141,7 @@ class ProjectDivision(models.Model):
         :return: Image numpy.ndarray
         """
         if hasattr(self, 'image'):
-            image = np.asarray(Image.open(self.image.image.path))
+            image = np.asarray(Image.open(self.image.image.path).convert('RGBA'))
             return image
         else:
             return None
@@ -154,12 +152,12 @@ class ProjectDivision(models.Model):
         Get a count of pixels in this division
         :return: Count int
         """
-        if hasattr(self, 'image'):
-            img = self.get_image()
-            return np.count_nonzero(
-                img[:, :, 3] != 0)  # TODO Determine if pixels should be counted with full or any opacity
-        else:
+        img = self.get_image()
+        if img is None:
             return None
+        else:
+            return np.count_nonzero(
+                img[..., -1] != 0)  # TODO Determine if pixels should be counted with full or any opacity
 
 
 def image_path(self, _) -> str:
