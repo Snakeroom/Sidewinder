@@ -10,6 +10,6 @@ urlpatterns = [
     path('projects/<uuid:uuid>', views.manage_project),
     path('projects/<uuid:uuid>/divisions', views.get_divisions),
     path('projects/<uuid:project_uuid>/divisions/<uuid:division_uuid>', views.manage_division),
-    path('projects/<uuid:project_uuid>/divisions/<uuid:division_uuid>', views.get_bitmap_for_division),
+    path('projects/<uuid:project_uuid>/divisions/<uuid:division_uuid>/bitmap', views.get_bitmap_for_division),
     path('bitmap', views.get_bitmap),
 ]
