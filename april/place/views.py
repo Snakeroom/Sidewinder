@@ -276,6 +276,8 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
             bitmap_resized = blit(bitmap, empty, div.get_origin())
             mask_array = bitmap_resized[:, :, 3] != 0
             np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
+    origin_x, origin_y, project_width, project_height = get_project_dimensions(project)
+    canvas = canvas[origin_x:origin_x + project_width, origin_y + origin_y:project_height, ...]
 
     project_bitmap = Image.fromarray(canvas.astype(np.uint8), mode='RGBA')
     io = BytesIO()
