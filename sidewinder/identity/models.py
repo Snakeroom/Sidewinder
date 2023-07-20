@@ -53,8 +53,8 @@ class RedditApplication(SingletonModel):
 class RedditCredentials(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens')
 
-    access_token = models.CharField(max_length=200)
-    refresh_token = models.CharField(max_length=200)
+    access_token = models.CharField(max_length=1000)
+    refresh_token = models.CharField(max_length=1000)
     last_refresh = models.DateTimeField()
 
     def __str__(self):
