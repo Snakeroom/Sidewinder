@@ -285,3 +285,34 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     return FileResponse(io, filename="bitmap.png", headers={
         "Content-Type": "image/png",
     })
+
+@has_valid_token_or_user
+def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_uuid: UUID):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+
+    try:
+        project = Project.objects.get(uuid=project_uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
+
+    if project.user_is_manager(user):
+        try:
+            division = ProjectDivision.objects.get(uuid=division_uuid)
+
+            if hasattr(division, 'image'):
+                division_bitmap = Image.open(division.image.image)
+                io = BytesIO()
+                division_bitmap.save(io, "png")
+                io.seek(0)
+                return FileResponse(io, filename="bitmap.png", headers={
+                    "Content-Type": "image/png",
+                })
+            else:
+                return JsonResponse({'error': 'No division bitmap'})
+        except ProjectDivision.DoesNotExist:
+            return JsonResponse({'error': 'Division not found'}, status=400)
+    else:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
