@@ -294,7 +294,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
 
     settings = CanvasSettings.get_solo()
     canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
-    for div in project.projectdivision_set.all():
+    for div in project.projectdivision_set.all().order_by():
         if hasattr(div, 'image'):
             empty = np.empty_like(canvas)
             bitmap = np.asarray(Image.open(div.image.image).convert('RGBA'))
