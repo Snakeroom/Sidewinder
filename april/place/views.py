@@ -149,16 +149,18 @@ def join_project(request: HttpRequest, uuid: UUID):
 @csrf_exempt
 @has_valid_token_or_user
 def create_division(request: HttpRequest, uuid: UUID):
-    user = request.snek_token.owner
-
-    # TODO: better permissions
-    if not user.is_staff:
-        return JsonResponse({"error": "Unauthorized"}, status=403)
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
 
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
+
+    if not project.user_is_manager(user):
+        return JsonResponse({"error": "Unauthorized"}, status=403)
 
     div = ProjectDivision.objects.create(project=project, priority=1)
     return JsonResponse({"message": "Successfully created division", "uuid": div.uuid})
