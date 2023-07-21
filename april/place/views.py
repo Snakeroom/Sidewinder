@@ -30,9 +30,11 @@ def manage_project(request: HttpRequest, uuid):
 
             project_dimensions = get_project_dimensions(project)
             if project_dimensions:
-                _, _, project_width, project_height = project_dimensions
-                result['width'] = project_width
-                result['height'] = project_height
+                result['origin'] = project_dimensions[0:2]
+                result['dimensions'] = project_dimensions[2:4]
+            else:
+                result['origin'] = (None, None)
+                result['dimensions'] = (None, None)
 
             if request.user.is_authenticated:
                 result['joined'] = current_project.user_is_member(request.user)
@@ -74,8 +76,8 @@ def get_project_dimensions(project: Project):
             min_x = min(min_x, x)
             min_y = min(min_y, y)
 
-            max_x = max(max_x, x + width)
-            max_y = max(max_y, y + height)
+            max_x = max(max_x, x + width - 1)
+            max_y = max(max_y, y + height - 1)
             if min_x > max_x or min_y > max_y:
                 return None
             else:
@@ -97,11 +99,11 @@ def get_projects(request: HttpRequest):
         project_dimensions = get_project_dimensions(project)
 
         if project_dimensions:
-            project_x, project_y, project_width, project_height = project_dimensions
-            result['x'] = project_x
-            result['y'] = project_y
-            result['width'] = project_width
-            result['height'] = project_height
+            result['origin'] = project_dimensions[0:2]
+            result['dimensions'] = project_dimensions[2:4]
+        else:
+            result['origin'] = (None, None)
+            result['dimensions'] = (None, None)
         result['featured'] = project.high_priority
 
         return result
@@ -302,7 +304,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
             mask_array = bitmap_resized[:, :, 3] != 0
             np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
     origin_x, origin_y, project_width, project_height = get_project_dimensions(project)
-    canvas = canvas[origin_x:origin_x + project_width, origin_y + origin_y:project_height, ...]
+    canvas = canvas[origin_y:origin_y + project_height, origin_x:origin_x + project_width, ...]
 
     project_bitmap = Image.fromarray(canvas.astype(np.uint8), mode='RGBA')
     io = BytesIO()
