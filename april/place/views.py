@@ -3,7 +3,10 @@ from io import BytesIO
 from uuid import UUID
 
 import numpy as np
+import requests
+import random
 from PIL import Image
+from django.contrib.auth.models import User
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
@@ -236,6 +239,21 @@ def blit(source, dest=np.array((1000, 1000)), origin=(0, 0)) -> np.ndarray:
     dest[pos[0]:pos[0] + source_resized.shape[0], pos[1]:pos[1] + source_resized.shape[1]] = source_resized
     return dest
 
+@has_valid_token_or_user
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def manage_user(request, uuid: UUID):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+    try:
+        project = Project.objects.get(pk=uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found'}, status=400)
+
+    if not project.user_is_manager(user):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
 
 @require_safe
 def get_bitmap(request: HttpRequest):
@@ -265,7 +283,14 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
+        return HttpResponse(b"Project with that UUID does not exist", status=400)
+
+    project_dimensions = get_project_dimensions(project)
+
+    if project_dimensions is None:
+        return HttpResponse(b"Project has no image data", status=400)
+
+    project_x, project_y, width, height = project_dimensions
 
     settings = CanvasSettings.get_solo()
     canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
@@ -287,6 +312,46 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     return FileResponse(io, filename="bitmap.png", headers={
         "Content-Type": "image/png",
     })
+
+
+@has_valid_token_or_user
+@require_http_methods(['GET'])
+def get_remediation(request):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+
+    try:
+        remediation_response = requests.get('http://localhost:8194/remediations')
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Gateway Timeout'}, status=504)
+
+    remediations = remediation_response.json()['remediations']
+
+    if not remediations:
+        if not any([project.user_is_member(user) for project in Project.objects.all()]):
+            return JsonResponse({'message': 'No projects joined'}, status=200)
+        else:
+            return HttpResponse(status=204)
+
+    remediation_divisions = [pixel['division_uuid'] for pixel in remediations]
+    remediation_projects = Project.objects.filter(projectdivision__uuid__in=remediation_divisions, approved=True)
+    user_remediation_projects = [project for project in remediation_projects if project.user_is_member(user)]
+
+    if not user_remediation_projects:
+        return JsonResponse({'message': 'No projects with remediations found'}, status=200)
+    user_remediation_project = random.choice(user_remediation_projects)
+    user_remediation_division = ProjectDivision.objects.filter(project=user_remediation_project, enabled=True,
+                                                               uuid__in=remediation_divisions).order_by(
+        'priority').last()
+
+    if not user_remediation_division:
+        return JsonResponse({'message': 'No divisions with remediations found'}, status=200)
+    remediation = [remediation for remediation in remediations if
+                   UUID(remediation['division_uuid']) == user_remediation_division.uuid][0]
+
+    return JsonResponse({'remediation': remediation}, status=200)
 
 
 @has_valid_token_or_user
