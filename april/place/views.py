@@ -2,11 +2,13 @@ import struct
 from io import BytesIO
 from uuid import UUID
 
+import json
 import numpy as np
 import requests
 import random
 from PIL import Image
 from django.contrib.auth.models import User
+from django.forms import ValidationError
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
@@ -214,17 +216,28 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
         return JsonResponse({'division': result}, status=200)
 
     elif request.method == 'POST':
-        division_name = request.POST.get('name', division.division_name)
-        priority = request.POST.get('priority', division.priority)
-        enabled = request.POST.get('enabled', division.enabled)
-
         try:
-            division.division_name = division_name
-            division.priority = priority
-            division.enabled = enabled
+            body = json.load(request)
+
+            if 'name' in body:
+                division.division_name = body['name']
+
+            if 'priority' in body:
+                division.priority = body['priority']
+
+            if 'enabled' in body:
+                division.enabled = body['enabled']
+
+            if 'origin' in body:
+                if not len(body['origin']) == 2 or isinstance(body['origin'], str):
+                    return JsonResponse({'error': 'Bad Request'}, status=400)
+
+                division.origin_x = body['origin'][0]
+                division.origin_y = body['origin'][1]
+
             division.save()
             return HttpResponse(status=204)
-        except ValueError:
+        except (ValueError, ValidationError):
             return JsonResponse({'error': 'Bad Request'}, status=400)
 
     elif request.method == 'DELETE':
