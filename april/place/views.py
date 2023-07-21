@@ -2,7 +2,10 @@ import struct
 from io import BytesIO
 from uuid import UUID
 
+import requests
+import random
 from PIL import Image
+from django.contrib.auth.models import User
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
@@ -14,7 +17,6 @@ from .models import Project, ProjectDivision, PALETTE, CanvasSettings, ProjectRo
 @require_http_methods(['GET'])
 @csrf_exempt
 def manage_project(request: HttpRequest, uuid):
-
     if request.method == "GET":
 
         def to_json(current_project):
@@ -49,6 +51,7 @@ def manage_project(request: HttpRequest, uuid):
             elif current_project.show_user_count:
                 result['members'] = current_project.get_user_count()
             return result
+
         try:
             project = Project.objects.get(pk=uuid)
             return JsonResponse(to_json(project), status=200)
@@ -238,13 +241,28 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
         return HttpResponse(status=204)
 
 
+@has_valid_token_or_user
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def manage_user(request, uuid: UUID):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+    try:
+        project = Project.objects.get(pk=uuid)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found'}, status=400)
+
+    if not project.user_is_manager(user):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
 
 @require_safe
 def get_bitmap(request: HttpRequest):
     settings = CanvasSettings.get_solo()
     canvas = Image.new('RGBA', (settings.canvas_width, settings.canvas_height), (255, 255, 255, 0))
 
-    for div in ProjectDivision.objects.all():
+    for div in ProjectDivision.objects.filter(project__approved=True):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
 
@@ -283,7 +301,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
 
     canvas = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
-    for div in project.projectdivision_set.all():
+    for div in project.projectdivision_set.filter(enabled=True):
         ox, oy = div.get_origin()
         width, height = div.get_dimensions()
         mx, my = ox - project_x, oy - project_y
@@ -305,3 +323,43 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
     return FileResponse(io, filename="bitmap.png", headers={
         "Content-Type": "image/png",
     })
+
+
+@has_valid_token_or_user
+@require_http_methods(['GET'])
+def get_remediation(request):
+    if hasattr(request, 'snek_token'):
+        user = request.snek_token.owner
+    else:
+        user = request.user
+
+    try:
+        remediation_response = requests.get('http://localhost:8194/remediations')
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Gateway Timeout'}, status=504)
+
+    remediations = remediation_response.json()['remediations']
+
+    if not remediations:
+        if not any([project.user_is_member(user) for project in Project.objects.all()]):
+            return JsonResponse({'message': 'No projects joined'}, status=200)
+        else:
+            return HttpResponse(status=204)
+
+    remediation_divisions = [pixel['division_uuid'] for pixel in remediations]
+    remediation_projects = Project.objects.filter(projectdivision__uuid__in=remediation_divisions, approved=True)
+    user_remediation_projects = [project for project in remediation_projects if project.user_is_member(user)]
+
+    if not user_remediation_projects:
+        return JsonResponse({'message': 'No projects with remediations found'}, status=200)
+    user_remediation_project = random.choice(user_remediation_projects)
+    user_remediation_division = ProjectDivision.objects.filter(project=user_remediation_project, enabled=True,
+                                                               uuid__in=remediation_divisions).order_by(
+        'priority').last()
+
+    if not user_remediation_division:
+        return JsonResponse({'message': 'No divisions with remediations found'}, status=200)
+    remediation = [remediation for remediation in remediations if
+                   UUID(remediation['division_uuid']) == user_remediation_division.uuid][0]
+
+    return JsonResponse({'remediation': remediation}, status=200)
