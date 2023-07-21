@@ -69,6 +69,9 @@ def get_project_dimensions(project: Project):
     min_x, min_y = settings.canvas_width, settings.canvas_height
     max_x = max_y = 0
 
+    if project.projectdivision_set.count() == 0:
+        return None
+
     for division in project.projectdivision_set.all():
         x, y = division.get_origin()
         width, height = division.get_dimensions()
@@ -80,10 +83,11 @@ def get_project_dimensions(project: Project):
 
             max_x = max(max_x, x + width - 1)
             max_y = max(max_y, y + height - 1)
-            if min_x > max_x or min_y > max_y:
-                return None
-            else:
-                return min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+
+    if min_x > max_x or min_y > max_y:
+        return None
+    else:
+        return min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
     # TODO Simplify this?
 
 
@@ -316,7 +320,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
             bitmap_resized = blit(bitmap, empty, div.get_origin())
             mask_array = bitmap_resized[:, :, 3] != 0
             np.copyto(canvas, bitmap_resized, where=np.repeat(mask_array[:, :, np.newaxis], 4, axis=2))
-    origin_x, origin_y, project_width, project_height = get_project_dimensions(project)
+    origin_x, origin_y, project_width, project_height = project_dimensions
     canvas = canvas[origin_y:origin_y + project_height, origin_x:origin_x + project_width, ...]
 
     project_bitmap = Image.fromarray(canvas.astype(np.uint8), mode='RGBA')
