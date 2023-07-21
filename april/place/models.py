@@ -160,6 +160,9 @@ class ProjectDivision(models.Model):
             return np.count_nonzero(
                 img[..., -1] != 0)  # TODO Determine if pixels should be counted with full or any opacity
 
+    def image_path(self) -> str:
+        return f'y22/bitmaps/{self.uuid}/{self.project.uuid}.png'
+
 
 def image_path(self, _) -> str:
     """
@@ -168,8 +171,7 @@ def image_path(self, _) -> str:
     :param _: Original filename of image
     :return: Path str
     """
-    return f'y22/bitmaps/{self.project_division.uuid}/{self.project_division.project.uuid}.png'
-
+    return self.project_division.image_path()
 
 class ProjectDivisionImage(models.Model):
     project_division = models.OneToOneField(ProjectDivision, on_delete=models.DO_NOTHING, related_name='image',

@@ -8,13 +8,14 @@ import requests
 import random
 from PIL import Image
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.forms import ValidationError
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
-from .models import Project, ProjectDivision, CanvasSettings, ProjectRole
+from .models import Project, ProjectDivision, ProjectDivisionImage, CanvasSettings, ProjectRole
 
 
 @require_http_methods(['GET'])
@@ -210,16 +211,11 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
     except ProjectDivision.DoesNotExist:
         return JsonResponse({'error': 'Division not found'}, status=400)
 
-    if request.method == 'GET':
-        result = dict(uuid=division.uuid,
-                      name=division.division_name,
-                      priority=division.priority,
-                      enabled=division.enabled,
-                      dimensions=division.get_dimensions(),
-                      origin=division.get_origin())
-        return JsonResponse({'division': result}, status=200)
+    if request.method == 'DELETE':
+        division.delete()
+        return HttpResponse(status=204)
 
-    elif request.method == 'POST':
+    if request.method == 'POST':
         try:
             body = json.load(request)
 
@@ -240,13 +236,17 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
                 division.origin_y = body['origin'][1]
 
             division.save()
-            return HttpResponse(status=204)
         except (ValueError, ValidationError):
             return JsonResponse({'error': 'Bad Request'}, status=400)
 
-    elif request.method == 'DELETE':
-        division.delete()
-        return HttpResponse(status=204)
+    result = dict(uuid=division.uuid,
+                  name=division.division_name,
+                  priority=division.priority,
+                  enabled=division.enabled,
+                  dimensions=division.get_dimensions(),
+                  origin=division.get_origin())
+
+    return JsonResponse({'division': result}, status=200)
 
 
 def blit(source, dest=np.array((1000, 1000)), origin=(0, 0)) -> np.ndarray:
@@ -373,7 +373,9 @@ def get_remediation(request):
     return JsonResponse({'remediation': remediation}, status=200)
 
 
+@csrf_exempt
 @has_valid_token_or_user
+@require_http_methods(['GET', 'POST'])
 def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_uuid: UUID):
     if hasattr(request, 'snek_token'):
         user = request.snek_token.owner
@@ -389,16 +391,34 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
         try:
             division = ProjectDivision.objects.get(uuid=division_uuid)
 
-            if hasattr(division, 'image'):
-                division_bitmap = Image.open(division.image.image).convert('RGBA')
+            if request.method == 'GET':
+                if hasattr(division, 'image'):
+                    division_bitmap = Image.open(division.image.image).convert('RGBA')
+                    io = BytesIO()
+                    division_bitmap.save(io, "png")
+                    io.seek(0)
+                    return FileResponse(io, filename="bitmap.png", headers={
+                        "Content-Type": "image/png",
+                    })
+                else:
+                    return JsonResponse({'error': 'No division bitmap'}, status=404)
+            elif request.method == 'POST':
+                image = Image.open(BytesIO(request.body)).convert('RGBA')
+                settings = CanvasSettings.get_solo()
+
+                if image.size[0] > settings.canvas_width or image.size[1] > settings.canvas_height:
+                    return JsonResponse({'error': 'Division image is too large'}, status=400)
+
                 io = BytesIO()
-                division_bitmap.save(io, "png")
-                io.seek(0)
-                return FileResponse(io, filename="bitmap.png", headers={
-                    "Content-Type": "image/png",
-                })
-            else:
-                return JsonResponse({'error': 'No division bitmap'}, status=404)
+                image.save(io, "png")
+
+                if not hasattr(division, 'image'):
+                    division.image = ProjectDivisionImage()
+
+                division.image.image.save(name=str(division.uuid), content=ContentFile(io.getvalue()))
+                division.save()
+
+                return HttpResponse(status=204)
         except ProjectDivision.DoesNotExist:
             return JsonResponse({'error': 'Division not found'}, status=400)
     else:
