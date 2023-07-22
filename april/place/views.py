@@ -7,7 +7,6 @@ import numpy as np
 import requests
 import random
 from PIL import Image
-from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.forms import ValidationError
 from django.http import HttpRequest, JsonResponse, FileResponse, HttpResponse
@@ -15,7 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_safe
 
 from sidewinder.sneknet.wrappers import has_valid_token_or_user
-from .models import Project, ProjectDivision, ProjectDivisionImage, CanvasSettings, ProjectRole
+from .models import Project, ProjectDivision, ProjectDivisionImage, ProjectRole
 
 
 @require_http_methods(['GET'])
