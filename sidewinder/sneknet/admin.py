@@ -4,12 +4,19 @@ from django.contrib import admin
 
 from sidewinder.sneknet.models import ScienceLog, Token, UserScript
 
+admin.site.site_header = 'Sidewinder Admin'
+admin.site.index_title = 'Admin Panel'
+admin.site.site_title = 'Sidewinder'
+
+
 def generate_token():
     return secrets.token_urlsafe(56)
+
 
 @admin.register(ScienceLog)
 class ScienceLogAdmin(admin.ModelAdmin):
     list_display = ('user_hash', 'total_actions',)
+
 
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
@@ -38,8 +45,8 @@ class TokenAdmin(admin.ModelAdmin):
 
         return initial
 
+
 @admin.register(UserScript)
 class UserScriptAdmin(admin.ModelAdmin):
     list_display = ('name', 'version', 'recommended',)
     list_filter = ('recommended', 'force_disable',)
-
