@@ -74,7 +74,7 @@ def get_canvas_config(port: int = 8194):
             self.canvas_offset_x = config.get('offset', empty)[0]
             self.canvas_offset_y = config.get('offset', empty)[1]
 
-    response = requests.get(f'localhost:{port}/config')
+    response = requests.get(f'http://localhost:{port}/config')
     response = response.json()
     return CanvasConfig(response)
 
