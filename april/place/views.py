@@ -386,9 +386,9 @@ def get_remediation(request):
     if not user_remediation_division:
         return JsonResponse({'message': 'No divisions with remediations found'}, status=200)
     remediation = [remediation for remediation in remediations if
-                   UUID(remediation['division_uuid']) == user_remediation_division.uuid][0]
+                   UUID(remediation['division_uuid']) == user_remediation_division.uuid][:request.GET.get('count', 1)]
 
-    return JsonResponse({'remediation': remediation}, status=200)
+    return JsonResponse({'remediations': remediation}, status=200)
 
 
 @csrf_exempt
