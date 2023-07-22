@@ -65,8 +65,23 @@ def manage_project(request: HttpRequest, uuid):
             return JsonResponse({'error': 'Project not Found'}, status=404)
 
 
+def get_canvas_config(port: int = 8194):
+    class CanvasConfig():
+        def __init__(self, config, ):
+            empty = (0, 0)
+            self.canvas_width = config.get('dimensions', empty)[0]
+            self.canvas_height = config.get('dimensions', empty)[1]
+
+            self.canvas_offset_x = config.get('offset', empty)[0]
+            self.canvas_offset_y = config.get('offset', empty)[1]
+
+    response = requests.get(f'localhost:{port}/config')
+    response = response.json()
+    return CanvasConfig(response)
+
+
 def get_project_dimensions(project: Project):
-    settings = CanvasSettings.get_solo()
+    settings = get_canvas_config()
     min_x, min_y = settings.canvas_width, settings.canvas_height
     max_x = max_y = 0
 
@@ -234,8 +249,9 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
                 if not len(body['origin']) == 2 or isinstance(body['origin'], str):
                     return JsonResponse({'error': 'Bad Request'}, status=400)
 
-                division.origin_x = body['origin'][0]
-                division.origin_y = body['origin'][1]
+                settings = get_canvas_config()
+                division.origin_x = settings.canvas_offset_x + body['origin'][0]
+                division.origin_y = settings.canvas_offset_y + body['origin'][1]
 
             division.save()
         except (ValueError, ValidationError):
@@ -260,6 +276,7 @@ def blit(source, dest=np.array((1000, 1000)), origin=(0, 0)) -> np.ndarray:
     dest[pos[0]:pos[0] + source_resized.shape[0], pos[1]:pos[1] + source_resized.shape[1]] = source_resized
     return dest
 
+
 @has_valid_token_or_user
 @require_http_methods(['GET', 'POST', 'DELETE'])
 def manage_user(request, uuid: UUID):
@@ -278,7 +295,7 @@ def manage_user(request, uuid: UUID):
 
 @require_safe
 def get_bitmap(request: HttpRequest):
-    settings = CanvasSettings.get_solo()
+    settings = get_canvas_config()
     canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
 
     for div in ProjectDivision.objects.filter(project__approved=True):
@@ -313,7 +330,7 @@ def get_bitmap_for_project(request: HttpRequest, uuid: UUID):
 
     project_x, project_y, width, height = project_dimensions
 
-    settings = CanvasSettings.get_solo()
+    settings = get_canvas_config()
     canvas = np.zeros((settings.canvas_width, settings.canvas_height, 4))
     for div in project.projectdivision_set.all().order_by():
         if hasattr(div, 'image'):
@@ -406,7 +423,7 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
                     return JsonResponse({'error': 'No division bitmap'}, status=404)
             elif request.method == 'POST':
                 image = Image.open(BytesIO(request.body)).convert('RGBA')
-                settings = CanvasSettings.get_solo()
+                settings = get_canvas_config()
 
                 if image.size[0] > settings.canvas_width or image.size[1] > settings.canvas_height:
                     return JsonResponse({'error': 'Division image is too large'}, status=400)

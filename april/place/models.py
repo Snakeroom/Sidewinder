@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.db import models
 from solo.models import SingletonModel
 
+from april.place.views import get_canvas_config
 from sidewinder.identity.models import User
 
 PALETTE = [
@@ -123,7 +124,8 @@ class ProjectDivision(models.Model):
         Get the origin of this layer
         :return: Position tuple (x, y)
         """
-        return self.origin_x, self.origin_y
+        settings = get_canvas_config()
+        return settings.canvas_offset_x - self.origin_x, settings.canvas_offset_y - self.origin_y
 
     @admin.display(description="Dimensions")
     def get_dimensions(self):
