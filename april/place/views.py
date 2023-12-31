@@ -61,7 +61,7 @@ def manage_project(request: HttpRequest, uuid):
             project = Project.objects.get(pk=uuid)
             return JsonResponse({'project': to_json(project)}, status=200)
         except Project.DoesNotExist:
-            return JsonResponse({'error': 'Project not Found'}, status=404)
+            return JsonResponse({'error': 'Project not Found', 'code': 'project_not_found'}, status=404)
 
 
 def get_canvas_config(port: int = 8194):
@@ -138,21 +138,21 @@ def get_projects(request: HttpRequest):
 @csrf_exempt
 def join_project(request: HttpRequest, uuid: UUID):
     if not request.user.is_authenticated:
-        return JsonResponse({"error": "Not authenticated"}, status=401)
+        return JsonResponse({"error": "Not authenticated", 'code': 'not_authenticated'}, status=401)
 
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project with that UUID doesn't exist!"}, status=400)
+        return JsonResponse({"error": "Project with that UUID doesn't exist!", 'code': 'invalid_project'}, status=400)
 
     if request.method == "PUT":
         if project.user_is_member(request.user):
-            return JsonResponse({"error": "Already in project"}, status=400)
+            return JsonResponse({"error": "Already in project", 'code': 'already_joined'}, status=400)
 
         ProjectRole(user=request.user, project=project, role='user').save()
     else:
         if not project.user_is_member(request.user):
-            return JsonResponse({"error": "Not in project"}, status=400)
+            return JsonResponse({"error": "Not in project", 'code': 'not_joined'}, status=400)
 
         ProjectRole.objects.filter(user=request.user, project=project).delete()
 
@@ -171,10 +171,10 @@ def create_division(request: HttpRequest, uuid: UUID):
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
+        return JsonResponse({"error": "Project with that UUID does not exist", 'code': 'invalid_project'}, status=404)
 
     if not project.user_is_manager(user):
-        return JsonResponse({"error": "Unauthorized"}, status=403)
+        return JsonResponse({"error": "Unauthorized", 'code': 'unauthorized'}, status=403)
 
     div = ProjectDivision.objects.create(project=project, priority=1)
     return JsonResponse({"message": "Successfully created division", "uuid": div.uuid})
@@ -192,7 +192,7 @@ def get_divisions(request: HttpRequest, uuid: UUID):
     try:
         project = Project.objects.get(uuid=uuid)
     except Project.DoesNotExist:
-        return JsonResponse({'error': 'Not Found'}, status=404)
+        return JsonResponse({'error': 'Not Found', 'code': 'invalid_project'}, status=404)
 
     if project.user_is_manager(user):
         divisions = [
@@ -220,12 +220,12 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
         return JsonResponse({'error': 'Project with that UUID does not exist'}, status=404)
 
     if not project.user_is_manager(user):
-        return JsonResponse({'error': 'Forbidden'}, status=403)
+        return JsonResponse({'error': 'Forbidden', 'code': 'forbidden'}, status=403)
 
     try:
         division = ProjectDivision.objects.get(pk=division_uuid, project__uuid=project_uuid)
     except ProjectDivision.DoesNotExist:
-        return JsonResponse({'error': 'Division not found'}, status=400)
+        return JsonResponse({'error': 'Division not found', 'code': 'invalid_division'}, status=400)
 
     if request.method == 'DELETE':
         division.delete()
@@ -246,7 +246,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
 
             if 'origin' in body:
                 if not len(body['origin']) == 2 or isinstance(body['origin'], str):
-                    return JsonResponse({'error': 'Bad Request'}, status=400)
+                    return JsonResponse({'error': 'Bad Request', 'code': 'invalid_origin'}, status=400)
 
                 settings = get_canvas_config()
                 division.origin_x = settings.canvas_offset_x + body['origin'][0]
@@ -254,7 +254,7 @@ def manage_division(request, project_uuid: UUID, division_uuid: UUID):
 
             division.save()
         except (ValueError, ValidationError):
-            return JsonResponse({'error': 'Bad Request'}, status=400)
+            return JsonResponse({'error': 'Bad Request', 'code': 'bad_request'}, status=400)
 
     result = dict(uuid=division.uuid,
                   name=division.division_name,
@@ -286,10 +286,10 @@ def manage_user(request, uuid: UUID):
     try:
         project = Project.objects.get(pk=uuid)
     except Project.DoesNotExist:
-        return JsonResponse({'error': 'Project not found'}, status=400)
+        return JsonResponse({'error': 'Project not found', 'code': 'invalid_project'}, status=400)
 
     if not project.user_is_manager(user):
-        return JsonResponse({'error': 'Forbidden'}, status=403)
+        return JsonResponse({'error': 'Forbidden', 'code': 'forbidden'}, status=403)
 
 
 @require_safe
@@ -362,7 +362,7 @@ def get_remediation(request):
     try:
         remediation_response = requests.get('http://localhost:8194/remediations')
     except requests.exceptions.ConnectionError:
-        return JsonResponse({'error': 'Gateway Timeout'}, status=504)
+        return JsonResponse({'error': 'Gateway Timeout', 'code': 'gateway_timeout'}, status=504)
 
     remediations = remediation_response.json()['remediations']
 
@@ -403,7 +403,7 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
     try:
         project = Project.objects.get(uuid=project_uuid)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project with that UUID does not exist"}, status=404)
+        return JsonResponse({"error": "Project with that UUID does not exist", 'code': 'invalid_project'}, status=404)
 
     if project.user_is_manager(user):
         try:
@@ -419,13 +419,13 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
                         "Content-Type": "image/png",
                     })
                 else:
-                    return JsonResponse({'error': 'No division bitmap'}, status=404)
+                    return JsonResponse({'error': 'No division bitmap', 'code': 'no_bitmap'}, status=404)
             elif request.method == 'POST':
                 image = Image.open(BytesIO(request.body)).convert('RGBA')
                 settings = get_canvas_config()
 
                 if image.size[0] > settings.canvas_width or image.size[1] > settings.canvas_height:
-                    return JsonResponse({'error': 'Division image is too large'}, status=400)
+                    return JsonResponse({'error': 'Division image is too large', 'code': 'image_overflow'}, status=400)
 
                 io = BytesIO()
                 image.save(io, "png")
@@ -438,6 +438,6 @@ def get_bitmap_for_division(request: HttpRequest, project_uuid: UUID, division_u
 
                 return HttpResponse(status=204)
         except ProjectDivision.DoesNotExist:
-            return JsonResponse({'error': 'Division not found'}, status=400)
+            return JsonResponse({'error': 'Division not found', 'code': 'invalid_division'}, status=400)
     else:
-        return JsonResponse({'error': 'Forbidden'}, status=403)
+        return JsonResponse({'error': 'Forbidden', 'code': 'forbidden'}, status=403)

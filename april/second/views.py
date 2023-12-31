@@ -50,7 +50,7 @@ def keepalive(socket: JsonWebsocketConsumer, content):
         round_state.round_id = cur_round_id
 
     if status == "inactive":
-        return JsonResponse({"error": "Round not active."}, status=400)
+        return JsonResponse({"error": "Round not active.", 'code': 'round_inactive'}, status=400)
 
     # Partition active users into two lists:
     # - People voting 1st (51%)
