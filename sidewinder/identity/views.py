@@ -90,7 +90,7 @@ def get_current_user(request):
         }, status=200)
     else:
         return JsonResponse({
-            "error": "Not signed in"
+            "error": "Not signed in", 'code': 'not_authenticated'
         }, status=401)
 
 
@@ -99,7 +99,7 @@ def get_current_user(request):
 def edit_profile(request):
     if request.user.is_anonymous:
         return JsonResponse({
-            "error": "Not signed in."
+            "error": "Not signed in.", 'code': 'not_authenticated'
         }, status=401)
 
     try:

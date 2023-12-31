@@ -15,12 +15,12 @@ from sidewinder.sneknet.wrappers import has_valid_token_or_user
 def submit_known_answers(request: HttpRequest):
     switch = MasterSwitch.get_solo()
     if not switch.enable_all:
-        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+        return JsonResponse({"error": "Temporarily disabled", 'code': 'disabled'}, status=503)
 
     body = json.load(request)
 
     if "options" not in body:
-        return JsonResponse({"error": "Missing 'options' key"}, status=400)
+        return JsonResponse({"error": "Missing 'options' key", 'code': 'missing_options'}, status=400)
 
     if hasattr(request, 'snek_token'):
         submitter = request.snek_token.owner
@@ -61,12 +61,12 @@ def submit_known_answers(request: HttpRequest):
 def query_answers(request: HttpRequest):
     switch = MasterSwitch.get_solo()
     if not switch.enable_queries or not switch.enable_all:
-        return JsonResponse({"error": "Querying temporarily disabled"}, status=503)
+        return JsonResponse({"error": "Querying temporarily disabled", 'code': 'disabled'}, status=503)
 
     body = json.load(request)
 
     if "options" not in body:
-        return JsonResponse({"error": "Missing 'options' key"}, status=400)
+        return JsonResponse({"error": "Missing 'options' key", 'code': 'missing_options'}, status=400)
 
     answers = []
     for i, opt in enumerate(body["options"]):
@@ -93,7 +93,7 @@ def query_answers(request: HttpRequest):
 @require_http_methods(["GET", "HEAD"])
 def fetch_recent(request: HttpRequest):
     if not MasterSwitch.get_solo().enable_all:
-        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+        return JsonResponse({"error": "Temporarily disabled", 'code': 'disabled'}, status=503)
 
     recent_answers = KnownAnswer.objects.order_by('-updated_at')[:5]
 
@@ -112,10 +112,10 @@ def fetch_recent(request: HttpRequest):
 @require_http_methods(["GET", "HEAD"])
 def check_answer(request: HttpRequest):
     if not MasterSwitch.get_solo().enable_all:
-        return JsonResponse({"error": "Temporarily disabled"}, status=503)
+        return JsonResponse({"error": "Temporarily disabled", 'code': 'disabled'}, status=503)
 
     if 'q' not in request.GET:
-        return JsonResponse({"error": "Missing query"}, status=400)
+        return JsonResponse({"error": "Missing query", 'code': 'missing_query'}, status=400)
 
     query = request.GET['q']
     try:
