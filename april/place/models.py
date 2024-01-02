@@ -1,9 +1,9 @@
-import struct
 import uuid
 
+import numpy as np
+from PIL import Image
 from django.contrib import admin
 from django.db import models
-from django.db.models import Q
 from solo.models import SingletonModel
 
 from sidewinder.identity.models import User
@@ -99,26 +99,23 @@ class Project(models.Model):
 
 
 def default_division_bytes():
-    # pos 0, 0; size 0, 0; no data
-    return b"\x00\x00\x00\x00\x00\x00\x00\x00"
+    return
 
 
 class ProjectDivision(models.Model):
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, verbose_name='UUID')
     division_name = models.CharField(max_length=256, default="Default")
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     priority = models.IntegerField(help_text="A higher number receives priority")
     enabled = models.BooleanField(help_text="Disable divisions to stop directing users to contribute to them",
                                   default=True)
-    content = models.BinaryField(help_text="Image data", editable=False, default=default_division_bytes)
-
-    # content is big-endian 4 shorts header followed by bytearray of data
+    height = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    width = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    origin_x = models.IntegerField(default=0, verbose_name='Origin X')
+    origin_y = models.IntegerField(default=0, verbose_name='Origin Y')
 
     def __str__(self):
         return f"{self.project.name} - {self.division_name}"
-
-    def unpack_header(self):
-        return struct.unpack(">HHHH", self.content[:8])
 
     @admin.display(description="Origin")
     def get_origin(self) -> (int, int):
@@ -126,28 +123,62 @@ class ProjectDivision(models.Model):
         Get the origin of this layer
         :return: Position tuple (x, y)
         """
-        pos = self.unpack_header()[:2]
-        return pos[0], pos[1]
+        from .views import get_canvas_config
+        settings = get_canvas_config()
+        return settings.canvas_offset_x - self.origin_x, settings.canvas_offset_y - self.origin_y
 
     @admin.display(description="Dimensions")
-    def get_dimensions(self) -> (int, int):
+    def get_dimensions(self):
         """
-        Get the size of this layer
+        Get the bitmap size for this division
         :return: Size tuple (width, height)
         """
-        size = self.unpack_header()[2:]
-        return size[0], size[1]
+        if hasattr(self, 'image'):
+            return self.image.width, self.image.height
+        else:
+            return None, None
 
-    def get_image_bytes(self) -> bytes:
-        return bytes(self.content[8:])
+    def get_image(self):
+        """
+        Get the bitmap for this division
+        :return: Image numpy.ndarray
+        """
+        if hasattr(self, 'image'):
+            image = np.asarray(Image.open(self.image.image.path).convert('RGBA'))
+            return image
+        else:
+            return None
 
-    def count_image_pixels(self) -> int:
-        img = self.get_image_bytes()
-        width, height = self.get_dimensions()
+    @admin.display(description='Pixel Count')
+    def get_pixel_count(self):
+        """
+        Get a count of pixels in this division
+        :return: Count int
+        """
+        img = self.get_image()
+        if img is None:
+            return None
+        else:
+            return np.count_nonzero(
+                img[..., -1] != 0)  # TODO Determine if pixels should be counted with full or any opacity
 
-        count = 0
-        for i in range(0, width * height):
-            if img[i] != 0xFF:
-                count += 1
+    def image_path(self) -> str:
+        return f'y22/bitmaps/{self.uuid}/{self.project.uuid}.png'
 
-        return count
+
+def image_path(self, _) -> str:
+    """
+    Return path to store bitmap image
+    :param self:
+    :param _: Original filename of image
+    :return: Path str
+    """
+    return self.project_division.image_path()
+
+class ProjectDivisionImage(models.Model):
+    project_division = models.OneToOneField(ProjectDivision, on_delete=models.DO_NOTHING, related_name='image',
+                                            editable=False)
+    image = models.ImageField(width_field='width', height_field='height',
+                              upload_to=image_path, null=True)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)

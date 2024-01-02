@@ -7,7 +7,7 @@ from sidewinder.sneknet.models import Token
 def _check_authorized(request: HttpRequest, view_func, kwargs):
     if request.user.is_authenticated:
         if not request.user.is_active:
-            return JsonResponse({"error": "Account deactivated."}, status=403)
+            return JsonResponse({"error": "Account deactivated.", "code": 'account_disabled'}, status=403)
 
         return view_func(request, **kwargs)
 
@@ -16,18 +16,18 @@ def _check_authorized(request: HttpRequest, view_func, kwargs):
     elif 'token' in request.GET:
         token = request.GET['token']
     else:
-        return JsonResponse({"error": "No token provided!"}, status=401)
+        return JsonResponse({"error": "No token provided!", 'code': 'missing_token'}, status=401)
 
     try:
         perm = Token.objects.get(token=token)
         if not perm.active:
-            return JsonResponse({"error": "Token deactivated"}, status=403)
+            return JsonResponse({"error": "Token deactivated", 'code': 'token_disabled'}, status=403)
 
         if perm.whitelisted_address is not None:
             if perm.whitelisted_address != request.headers['X-Real-Ip']:
-                return JsonResponse({"error": "Token not valid for this address"}, status=403)
+                return JsonResponse({"error": "Token not valid for this address", 'code': 'invalid_token_address'}, status=403)
     except Token.DoesNotExist:
-        return JsonResponse({"error": "Invalid token!"}, status=403)
+        return JsonResponse({"error": "Invalid token!", 'code': 'invalid_token'}, status=403)
 
     request.snek_token = perm
     return view_func(request, **kwargs)

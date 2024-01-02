@@ -27,6 +27,7 @@ DJANGO_APPS = [
     'solo.apps.SoloAppConfig',
     'corsheaders',
     'channels',
+    'image_uploader_widget',
 ]
 
 LOCAL_APPS = [

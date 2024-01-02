@@ -11,7 +11,7 @@ def report(socket: JsonWebsocketConsumer, content):
     user = socket.scope['user']
 
     if not user.is_authenticated:
-        socket.send_json({"error": "Not authenticated."})
+        socket.send_json({"error": "Not authenticated.", 'code': 'not_authenticated'})
         return
 
     if 'won' not in content:
@@ -32,7 +32,7 @@ def keepalive(socket: JsonWebsocketConsumer, content):
     user = socket.scope['user']
 
     if not user.is_authenticated:
-        socket.send_json({"error": "Not authenticated."})
+        socket.send_json({"error": "Not authenticated.", 'code': 'not_authenticated'})
         return
 
     round_state = RoundState.get_solo()
@@ -50,7 +50,7 @@ def keepalive(socket: JsonWebsocketConsumer, content):
         round_state.round_id = cur_round_id
 
     if status == "inactive":
-        return JsonResponse({"error": "Round not active."}, status=400)
+        return JsonResponse({"error": "Round not active.", 'code': 'round_inactive'}, status=400)
 
     # Partition active users into two lists:
     # - People voting 1st (51%)

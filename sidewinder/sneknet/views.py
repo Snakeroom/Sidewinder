@@ -15,7 +15,7 @@ def handle_science(socket: JsonWebsocketConsumer, content):
 def get_owned_tokens(request: HttpRequest):
     if not request.user.is_authenticated:
         return JsonResponse({
-            "error": "Not signed in."
+            "error": "Not signed in.", 'code': 'not_authenticated'
         }, status=401)
 
     tokens = [{
@@ -27,12 +27,12 @@ def get_owned_tokens(request: HttpRequest):
 
     return JsonResponse({
         "tokens": tokens,
-    })
+    }, status=200)
 
 def get_user_scripts(request: HttpRequest):
     if not request.user.is_authenticated:
         return JsonResponse({
-            "error": "Not signed in."
+            "error": "Not signed in.", 'code': 'not_authenticated'
         }, status=401)
 
     scripts = [{
@@ -46,4 +46,4 @@ def get_user_scripts(request: HttpRequest):
 
     return JsonResponse({
         "scripts": scripts,
-    })
+    }, status=200)
