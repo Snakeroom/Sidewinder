@@ -14,16 +14,13 @@ from django.core.asgi import get_asgi_application
 
 from sidewinder.sneknet.routes import socket_routes
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.production')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.production")
 
 asgi_application = get_asgi_application()
 
-def make_django_asgi_app(scope):
-    def entry_callable(receive, send):
-        return asgi_application(scope, receive, send)
-    return entry_callable
-
-application = ProtocolTypeRouter({
-    "http": make_django_asgi_app,
-    "websocket": socket_routes
-})
+application = ProtocolTypeRouter(
+    {
+        "http": asgi_application,
+        "websocket": socket_routes,
+    }
+)
